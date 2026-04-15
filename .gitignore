@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# React / JS
+node_modules/
+dist/
+.eslintcache
+.DS_Store
+
+# Local IDE
+.vscode/
+.idea/
+
+# Development files (documentation/notes)
+logic.txt
+plan.txt
+OpenAlex.jsx

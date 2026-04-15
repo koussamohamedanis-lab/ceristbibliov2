@@ -1,0 +1,128 @@
+======================================================================
+         BIBLE DU CODE SOURCE : CERIST BIBLIO-PLATFORM 
+(Le guide absolu pour comprendre le code à 1000%, fichier par fichier)
+======================================================================
+
+Ce document décortique l'entièreté de votre projet techniquement. Il vous permet de comprendre la syntaxe, la logique, et le "pourquoi" de chaque fichier.
+
+======================================================================
+PARTIE 1 : LE BACKEND (Dossier 'Backend/') - L'Intelligence et la Base
+======================================================================
+Le backend est codé en **Python** avec le framework web **FastAPI**. 
+Son rôle : Se connecter à la base de données, sécuriser les accès, faire les calculs lourds, et envoyer les données au Frontend.
+
+1. `main.py` (Le Cœur / Le Point d'Entrée)
+-----------------------------------------
+- À quoi ça sert ? C'est le fichier qui lance le serveur. Il rassemble toutes les "routes" (les URLs) créées dans les autres fichiers.
+- Logique (Syntaxe) : 
+  `app = FastAPI()` crée le serveur.
+  `CORSMiddleware` est ajouté pour autoriser votre Frontend React (qui tourne sur le port 5173) à parler au Backend (port 8000) sans être bloqué par la sécurité du navigateur.
+  `app.include_router(...)` dit au serveur d'importer toutes les routes codées dans les autres sous-fichiers.
+
+2. `database.py` (La Connexion SQL)
+-----------------------------------
+- À quoi ça sert ? Connecter Python à PostgreSQL.
+- Logique : Utilise la bibliothèque `SQLAlchemy`. 
+  `create_engine("postgresql://...")` ouvre un tuyau vers votre base de données.
+  `sessionmaker` crée des sessions (des discussions) avec la base. Chaque fois qu'un utilisateur fait une requête, on ouvre une session, on pose la question à la base, et on la ferme.
+
+3. `models.py` (Le Schéma de la Base de Données)
+------------------------------------------------
+- À quoi ça sert ? Traduire les tables PostgreSQL en classes Python.
+- Logique : C'est ici que l'on crée la structure (Les "Entities").
+  `__tablename__ = "users"` : Associe la classe Python à la table.
+  `institution_id = Column(Integer, ForeignKey("institutions.id"))` : Ceci est fondamental. C'est la relation. Ça dit "Ce laboratoire appartient à cette institution". Si quelqu'un de l'extérieur essaie de lier une équipe à un faux labo, la base refusera grâce à ces clés étrangères (`ForeignKey`).
+  `must_change_password = Column(Boolean, default=False)` : Un champ de sécurité pour forcer les nouveaux comptes à changer leur mot de passe.
+
+4. Dossier `routers/` (Les Contrôleurs)
+---------------------------------------
+C'est ici qu'on programme les endpoints API (ex: `http://localhost:8000/api/users`).
+
+-> `auth.py` : Logique de Connexion.
+   Syntaxe clé : On prend le mot de passe, on utilise `pwd_context.hash()` pour le crypter (personne ne verra le mot de passe réel). Si c'est bon, on utilise `jwt.encode()` pour générer un "Token d'Accès" (un bracelet VIP numérique) que l'utilisateur devra présenter pour chaque action future.
+
+-> `registration.py` : L'Inscription Intelligente en Cascade.
+   C'est un des plus gros fichiers. Il possède une route par rôle (`/chercheur`, `/chef_equipe`, etc.).
+   La logique : Si un compte demande à être "Directeur", le code va exiger son "Tutelle_id", puis va automatiquement insérer une nouvelle ligne dans la table `Institution`, et enfin lier cet utilisateur comme Directeur de cette institution. Aucun humain n'a besoin de faire ça manuellement, la machine s'en charge.
+   C'est aussi ici que réside `/change-password` qui met la variable `must_change_password` à False pour valider qu'un compte est sécurisé.
+
+-> `hierarchy_management.py` & `users.py` : Vérification des Droits.
+   Ici, la logique centrale s'appelle le "Scope" (le verrouillage). Avant d'envoyer la liste des utilisateurs à la page Web, le code vérifie qui pose la question (`current_user = Depends(get_current_user)`). 
+   Si c'est un Chef de Labo, la syntaxe SQL générée en arrière-plan rajoute `WHERE labo_id = 12`. Ainsi, les données sont "hermétiques".
+
+-> `teams.py` : L'Analyse d'Équipe.
+   Fournit la liste des membres, mais appelle surtout les fonctions Bibliometrix.
+   Syntaxe : `router.get("/{user_id}/search-researchers")` prend ce que vous tapez dans la barre de recherche du frontend, et fait un `.ilike(f"%{q}%")` en base de données pour trouver un chercheur par son nom ou son email.
+
+5. `services/bibliometrix.py` (L'Analyse des Données - R et Python)
+-------------------------------------------------------------------
+- À quoi ça sert ? C'est le cerveau scientifique du projet.
+- Logique (Le pont Python-R) : Il essaie d'abord d'activer la bibliothèque `rpy2`. S'il y arrive, il envoie les tableaux de publications (le JSON) au langage "R" pour qu'il exécute de vraies fonctions du package "bibliometrix" (`networkPlot`, `h_index`).
+- Si "R" n'est pas installé, la syntaxe a été conçue intelligemment avec un `try/except` (un filet de sécurité) : le code bascule automatiquement sur une fonction "pure Python" (Fallback) écrite à la main qui calcule le H-index global. Les visualisations riches comme la "Carte Thématique" ou le "Radar" sont structurées ici de façon mathématique (Moteur, de Niche) pour que le frontend n'ait qu'à les dessiner.
+
+
+======================================================================
+PARTIE 2 : LE FRONTEND (Dossier 'ceristbiblio_platform/src/') - L'Interface Visuale
+======================================================================
+Le Frontend est monté avec **React.js**. React utilise le `JSX` (un mélange de Javascript et de HTML) pour créer des pages dynamiques.
+
+1. `App.jsx` (Le Gardien de l'Aiguillage)
+-----------------------------------------
+- À quoi ça sert ? C'est le chef d'orchestre des routes sur le navigateur.
+- Logique de syntaxe : Utilise `<BrowserRouter>`. C'est l'équivalent du GPS. Si l'utilisateur tape `/login` dans l'URL, React affiche `<Login />`. S'il tape `/dashboard`, React vérifie d'abord via une "Route Protégée" (Protected Route) s'il a bien un Token d'Aaccès. Sinon, hop, renvoyé au Login !
+
+2. `services/api.js` (Le Facteur Web)
+-------------------------------------
+- À quoi ça sert ? Permettre au React de parler avec FastAPI.
+- Logique de syntaxe : Utilise la bibliothèque `axios`. 
+  `axios.interceptors.request.use(...)` : Ceci est crucial. C'est un code "intercepteur". Avant MÊME qu'une requête HTTP ne parte vers le backend Python, le code Javascript ouvre le `localStorage` de votre navigateur, récupère le fameux "Token d'accès VIP", et l'attache en tant que "Bearer Token". Le Backend vous laissera donc entrer.
+
+3. `pages/Login.jsx` & `pages/Register.jsx` (Les Portes d'Entrée)
+-----------------------------------------------------------------
+- Login : Récupère le mail/mot de passe. Fonctionne avec le "State" (`useState`), une variable mémoire en React. S'il réussit, il sauve votre rôle, votre laboratoire et le fameux `must_change_password`. S'il vaut "True", `window.location.href = '/settings?force_password_change=true'` s'exécute pour vous confiner dans la page mot de passe.
+- Register : Construite comme un "Wizard" (Assistant 3 étapes). 
+  Étape 1 : Le clic enregistre le Rôle.
+  Étape 2 : Un `useEffect()` se déclenche pour demander au Serveur la liste des Universités ou Tutelles. L'astuce ici c'est le "cascading" : si le chercheur choisit l'Institution HJB, la variable contenant l'ID change, ce qui déclenche un autre `useEffect` pour charger la liste de SES laboratoires UNIQUEMENT.
+
+4. `components/Sidebar.jsx` (Le Menu Dynamique)
+-----------------------------------------------
+- À quoi ça sert ? Le menu de gauche.
+- Logique (Rendu Conditionnel JSX) : 
+  `{userRole === 'directeur' && ( <li>Gestion Institution</li> )}`
+  Cette syntaxe signifie : "SI, et seulement si, l'utilisateur a le rôle directeur, ALORS dessine cette balise HTML à l'écran". Un chercheur ne verra donc jamais le bouton de gestion de labo.
+
+5. `pages/TeamManagement.jsx` (Le Dashboard de l'Équipe)
+--------------------------------------------------------
+- À quoi ça sert ? La page la plus dense. Gestion et Graphiques de l'équipe (Bibliometrix).
+- Logique et dépendances :
+  Elle importe la librairie `Recharts` (LineChart, RadarChart, ScatterChart).
+  Lorsqu'elle démarre, `fetchData()` demande au Backend les statistiques avancées. 
+  La syntaxe `advancedStats.radar.map()` va prendre le tableau JSON généré par Python, et pour chaque chercheur, React va dessiner automatiquement une pointe sur le graphique en forme de Toile d'Araignée.
+  Il y a aussi une barre de recherche. L'attribut `onChange={(e) => setSearchQuery(e.target.value)}` indique que chaque lettre tapée met à jour la mémoire de React en temps réel.
+
+6. `pages/UserManagement.jsx` (La Tour de Contrôle Admin)
+---------------------------------------------------------
+- À quoi ça sert ? Créer des sous-comptes dynamiquement depuis l'interface (plutôt que d'aller dans la base de données brute).
+- Logique : Intègre un "Soft Delete". Quand on clique sur le bouton rouge "Supprimer", la méthode `handleDelete` envoie une requête `DELETE` à l'API. C'est l'API (vu précédemment en Partie 1) qui met l'utilisateur en inactif (`is_active = False`) au lieu de le rayer totalement, préservant ainsi ses travaux scientifiques.
+
+7. `pages/Settings.jsx` (Sécurité et Profil)
+--------------------------------------------
+- Syntaxe JSX des "Onglets" : La page contient 2 onglets "Profil" et "Mot de passe". Le code utilise `activeTab === 'profile' ? <Afficher Formulaire 1> : <Afficher Formulaire 2>`. 
+- Logique de redirection : Au chargement, la page regarde l'URL (`URLSearchParams(window.location.search)`). Si elle voit le mot clé `force_password_change`, elle force l'affichage de l'onglet mot de passe et bloque la page avec une alerte rouge.
+
+
+======================================================================
+EN RÉSUMÉ (Le Parcours Complet d'un Clic : De la souris au SQL)
+======================================================================
+1. INTERFACE (React.js) : L'utilisateur clique sur "Ajouter à l'équipe" depuis `TeamManagement.jsx`.
+2. MÉMOIRE (Javascript) : React lance la fonction `handleAddMember(...)` qui contient l'ID du chercheur sélectionné.
+3. PONCEAU (Axios via api.js) : Le javascript accroche votre badge de sécurité (Access Token) et fait une requête HTTP POST HTTP://monsite/api/teams/...
+4. ROUTEUR (FastAPI) : Le fichier `main.py` réceptionne l'appel HTTP et demande au fichier `routers/teams.py` de l'assumer.
+5. SÉCURITÉ (Depends) : Python vérifie votre badge VIP via la fonction `get_current_user`. Si votre Token est faux/expiré, tout s'arrête en erreur 401.
+6. BASE DE DONNÉES (SQLAlchemy) : Python ouvre la table `Users`, cherche la ligne du chercheur concerné, et modifie la colonne `equipe_id` avec l'ID de votre équipe. 
+7. TRANSACTION (Base de données) : Le code Python fait `db.commit()` (Validation finale du changement). Il demande à PostgreSQL d'enregistrer la sauvegarde sur le disque dur.
+8. RETOUR VERS LE FUTUR : Python renvoie au Javascript : `{"success": true, "message": "Membre ajouté"}`.
+9. ACTUALISATION : Le code Javascript lit "true", déclenche la mise à jour visuelle, et l'étiquette s'actualise sur votre écran, tout en appelant de nouveau Bibliometrix en R via le serveur pour recalculer le nouveau H-index du groupe avec ce nouveau membre.
+
+C'est cette chorégraphie millimétrée entre React (L'esthétique et la réactivité), FastAPI (La rapidité et la sécurité) et PostgreSQL/Bibliometrix (La mémoire et la donnée scientifique) qui fait de votre projet une Plateforme de Gestion Bibliométrique Industrielle.
+======================================================================

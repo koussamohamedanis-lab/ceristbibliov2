@@ -1,0 +1,106 @@
+================================================================================
+          L'ENCYCLOPÉDIE DU CODE : EXPLICATION LIGNE PAR LIGNE DE TOUTES LES PAGES
+================================================================================
+
+Ce document est le dictionnaire complet de votre projet. Il passe en revue toutes les pages du Frontend (React) et du Backend (FastAPI) pour expliquer la syntaxe.
+
+================================================================================
+                   PARTIE 1 : LE FRONTEND (React.js - /src/pages)
+================================================================================
+
+1. La Page : `Login.jsx` (La Connexion)
+---------------------------------------
+> `const navigate = useNavigate()` : Déclare un outil pour forcer la page à changer (ex: aller vers la page d'accueil d'un coup).
+> `const [email, setEmail] = useState('')` : Crée une mémoire vide nommée 'email'. 'setEmail' est le seul bouton pour remplir cette mémoire.
+> `const response = await login(email, password)` : Demande au Backend d'évaluer le mot de passe. Le mot clé `await` oblige le code Javascript à pauser et attendre la réponse du serveur avant de passer à la ligne suivante.
+> `localStorage.setItem('access_token', response.data.access_token)` : Si réussi, le navigateur sauvegarde physiquement la clé secrète.
+> `if (response.data.must_change_password) { window.location.href = '/settings?force_password_change=true' }` : Si le compte vient d'être créé par un admin, on l'expulse directement vers la page Paramètres.
+
+
+2. La Page : `App.jsx` (Le Routeur Principal)
+---------------------------------------------
+> `<BrowserRouter>` : Active le mode GPS de React. Sans ça, impossible de détecter si on est sur la page `/login` ou `/settings`.
+> `<Route path="/login" element={<Login />} />` : Règle de trafic. Si l'URL est '/login', dessine le composant (la page) Login.
+> `<ProtectedRoute requiredRole="tutelle"> <UserManagement /> </ProtectedRoute>` : Un composant customisé ! Si vous essayez d'accéder à la gestion des utilisateurs, `ProtectedRoute` va vérifier dans votre `localStorage` si vous avez le rôle "tutelle" ou "directeur". Si non = éjection au menu.
+
+
+3. La Page : `Sidebar.jsx` (Le Menu Latéral)
+--------------------------------------------
+> `const userRole = localStorage.getItem('userRole')` : Cherche le rôle du gars qui veut voir le menu.
+> `{['tutelle', 'directeur', 'chef_labo'].includes(userRole) && (<MenuGestion />)}` : Évaluation JAVASCRIPT stricte. "Cherche si mon rôle appartient à cette liste. Si OUI (&&), alors dessine le bouton de Gestion d'équipe. La syntaxe `{}` permet d'insérer du Javascript logique au milieu du code HTML.
+> `onClick={handleLogout}` : Quand on clique sur Déconnexion, efface TOUT le `localStorage` en une seconde, détruisant ainsi l'Access Token et expulsant l'utilisateur de force.
+
+
+4. La Page : `TeamManagement.jsx` (Le Dashboard Bibliometrix de l'Équipe)
+--------------------------------------------------------------------------
+> `const [advancedStats, setAdvancedStats] = useState(null)` : Prépare la boîte mémoire pour recevoir les graphiques complexes de R.
+> `<RadarChart data={advancedStats.radar}>` : Importation d'une balise Recharts. On donne `data` (le tableau généré par Python).
+> `<PolarAngleAxis dataKey="subject" />` : On dit au graphique Spider/Radar : "Pour les pointes de la toile d'araignée, utilise le texte contenu dans la case 'subject' du JSON de python" (le 'subject' contient Prénom + Nom).
+> `<Scatter data={advancedStats.thematic}> ... <Cell fill={colors[entry.category]} />` : Pour la carte thématique, on dessine une bulle (Scatter). Sauf qu'à chaque bulle, on vérifie si la bulle est "Moteur, Émergent, Niche". On lui donne la couleur `{colors}` définie dans la syntaxe Javascript (ex: #ef4444 pour Rouge).
+> `window.confirm('Voulez vous retirer...')` : Fait pop-up une vraie alerte Windows de confirmation avant de lancer l'appel api `remove-member` pour éviter les erreurs de clic.
+
+
+5. La Page : `Settings.jsx` (Paramètres et Mot de passe)
+-------------------------------------------------------
+> `const searchParams = new URLSearchParams(window.location.search)` : Le Javascript lit l'URL dans la barre de votre navigateur (ex: ...?force_password_change=true).
+> `setActiveTab('password')` : Ouvre de force le 2eme onglet si le backend exige le changement du mot passe auto-généré "Cerist_2026!".
+> `passwordForm.new_password !== passwordForm.confirm_password` : Si ce clavier a tapé deux valeurs différentes pour le mot de passe, ça bloque avant même d'avoir dérangé le serveur Backend.
+
+
+================================================================================
+                 PARTIE 2 : LE BACKEND (Python FastAPI - /Backend)
+================================================================================
+
+1. Fichier : `main.py` (Lancement du Serveur Web)
+-------------------------------------------------
+> `app = FastAPI(...)` : Déclare la variable suprême. L'ordinateur sait maintenant que ce fichier est un serveur Web.
+> `app.add_middleware(CORSMiddleware, allow_origins=["*"])` : (CORS) Protocole mondial de sécurité anti-piratage inter-domaines. Ça dit au serveur "je t'ordonne d'accepter les clics venant de l'interface React `localhost:5173`". Si on enlève cette ligne, React crashe en disant "Bloqué par la Politique CORS".
+> `app.include_router(teams.router)` : Injecte le fichier de la page Équipe 100% dans le serveur central.
+
+
+2. Fichier : `database.py` (Moteur PostgreSQL)
+----------------------------------------------
+> `SQLALCHEMY_DATABASE_URL = "postgresql://postgres:anis@localhost/ceristbiblio_db"` 
+  - postgres = utilisateur de la BD
+  - anis = votre mot de passe PGAdmin
+  - localhost = Sur votre même ordinateur
+  - ceristbiblio_db = le nom de la base de données.
+> `Base = declarative_base()` : Un moule. Toute table que l'on va créer dans `models.py` devra hériter de ça pour que SQLAlchemy sache la reconnaitre.
+
+
+3. Fichier : `models.py` (Les Schémas)
+--------------------------------------
+> `__tablename__ = "users"` : Force la création d'une table nommée exactement 'users' en SQL.
+> `id = Column(Integer, primary_key=True, index=True)` : 'primary_key' = Ne peut pas exister 2 utilisateurs avec le même ID. 'index=True' = Le serveur crée un "sommaire" alphabétique de cette colonne, les recherches de profil vont 1000 fois plus vite.
+> `must_change_password = Column(Boolean, default=False)` : Une colonne "Vrai ou Faux", très légère pour éviter les surcharges.
+> `laboratoire_rel = relationship("Laboratoire", foreign_keys=[labo_id])` : SQLAlchemy comprend qu'en lisant un Utilisateur, il doit lui associer les informations de la CLASSE "Laboratoire".
+
+
+4. Routeur : `routers/auth.py` (La Magie du Login)
+--------------------------------------------------
+> `@router.post("/login")` : ".post" car l'utilisateur ENVOIE des infos secrètes cachées dans la trame HTTP. On ne passe jamais de mot de passe en ".get".
+> `user = db.query(User).filter(User.email == credentials.username).first()` : "Trouve l'utilisateur avec ce mail en base".
+> `verify_password(credentials.password, user.password_hash)` : Compare le mot secret "anis" tapé par le mec, avec le truc incompréhensible hashé dans PostgreSQL "$2b$12$D23...".
+> `access_token = create_access_token(data={"sub": str(user.id)})` : Encodage en base64 de sa carte d'identité, signée cryptographiquement. C'est ce Token qui est envoyé à React.
+
+
+5. Routeur : `routers/hierarchy_management.py` (La Multitenancy stricte)
+------------------------------------------------------------------------
+> `if current_user.role not in ["tutelle", "directeur"]:` : Check de permission brutal. S'il n'est ni Directeur ni Tutelle, éjecté.
+> `existing = db.query(Laboratoire).filter(Laboratoire.nom == lab_data.get('nom')).first()` : Si le nouveau nom de Labo tapé par l'admin existe DEJA en Base de données, la ligne suivante `raise HTTPException(status_code=400)` s'active et renvoie une erreur "Ce laboratoire existe déjà, impossible de doubler".
+
+
+6. Routeur : `routers/users.py` (Fonction de Création Automatique)
+------------------------------------------------------------------
+> `hashed_password = pwd_context.hash(user_data.get("password", "Cerist_2026!"))` : Si le Directeur clique sur 'Ajouter Utilisateur' et ne passe AUCUN mot de passe, Python attribue de force "Cerist_2026!" à son insu.
+> `if current_user.role == "directeur": new_user.institution_id = current_user.institution_id` : LIGNES CRITIQUES. Ça s'appelle le "Scope". Même si un directeur mal-intentionné essaie de trafiquer la requête web pour ajouter un membre dans une Université qui n'est pas la sienne, Python L'ÉCRASE brutalement avec SA propre institution. Parfait pour empêcher la fraude de données.
+> `user.is_active = False` : Suppression par "Soft Delete". Dans la route "Delete", le script fait exprès de NE MÊME PAS utiliser la commande db.delete(). Il masque simplement l'utilisateur pour ne pas corrompre les statistiques de l'université.
+
+
+7. Service Magique : `services/bibliometrix.py` (Python et R)
+-------------------------------------------------------------
+> `import rpy2.robjects as ro` : Appelle explicitement le langage R.
+> `merged = merge_publications_no_duplicates(publications)` : Boucle "For" Python ultra rapide qui efface les articles apparaissant en double de la mémoire temporaire, en se basant sur le code international `openalex_id`, de manière à ce que les "H-index de groupe" soient absolument justes.
+> `ro.globalenv['M'] = r_df` : Transfère ce tableau propre (df, le DataFrame Pandas) DANS la Mémoire de "R".
+> `for(i in seq_along(TC_sorted))` : Une boucle "For" mais écrite avec la syntaxe de "R". Elle descend le nombre de citations de chaque article (TC) jusqu'à trouver le fameux H-Index de l'équipe unifiée.
+> `generate_advanced_mapping(...)` :  Le grand plan B. Puisque la base de données ne contient pas directement la table relationnelle mondiale `co_auteurs_network`, cette fonction Python parcourt les metrics existants de l'équipe et génère les blocs JSON (Radar = % Productivité/Impact/H-index) qui alimentent précisément les graphiques React de la page "TeamManagement".

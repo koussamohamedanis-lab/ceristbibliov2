@@ -1,0 +1,240 @@
+/* ==================== STATS PANEL ====================  */
+
+.stats-panel {
+  background-color: var(--bg-cartes);
+  border: 1px solid var(--bordres);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 100px;
+}
+
+.stats-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--bordres);
+}
+
+.stats-icon {
+  color: var(--main-green);
+  font-size: 24px;
+}
+
+.stats-header h2 {
+  font-family: var(--font-title);
+  font-size: 18px;
+  color: var(--main-text);
+  margin: 0;
+}
+
+/* ==================== KPIs GRID ====================  */
+
+.stats-kpis {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.kpi-card {
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--bordres);
+  background: linear-gradient(135deg, #FAFBFC 0%, #F3F4F6 100%);
+  transition: all 0.2s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  flex: 1;
+}
+
+.kpi-icon {
+  font-size: 20px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.kpi-researchers .kpi-icon {
+  color: #EF4444;
+}
+
+.kpi-publications .kpi-icon {
+  color: #3B82F6;
+}
+
+.kpi-citations .kpi-icon {
+  color: #F59E0B;
+}
+
+.kpi-h-index .kpi-icon {
+  color: #10B981;
+}
+
+.kpi-value {
+  font-family: var(--font-title);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--main-text);
+  margin: 8px 0;
+  line-height: 1;
+}
+
+.kpi-description {
+  font-size: 12px;
+  color: var(--sec-text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ==================== CHART SECTION ====================  */
+
+.stats-chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chart-title {
+  font-family: var(--font-title);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--main-text);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chart-container {
+  background-color: #F9FAFC;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--bordres);
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-empty {
+  text-align: center;
+  color: var(--sec-text);
+  font-size: 14px;
+}
+
+/* ==================== SUMMARY SECTION ====================  */
+
+.stats-summary {
+  padding: 16px;
+  background-color: rgba(22, 163, 74, 0.05);
+  border-radius: 8px;
+  border-left: 4px solid var(--main-green);
+}
+
+.stats-summary h3 {
+  font-family: var(--font-title);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--main-text);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-text p {
+  font-size: 13px;
+  color: var(--main-text);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.summary-text strong {
+  color: var(--main-green);
+  font-weight: 600;
+}
+
+/* ==================== RECHARTS CUSTOMIZATION ====================  */
+
+.recharts-wrapper {
+  outline: none;
+}
+
+.recharts-surface {
+  overflow: visible;
+}
+
+.recharts-cartesian-axis-tick {
+  font-size: 12px !important;
+}
+
+.recharts-text {
+  font-family: var(--font-text) !important;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+.recharts-tooltip {
+  outline: none;
+}
+
+.recharts-default-tooltip {
+  outline: none;
+}
+
+/* ==================== RESPONSIVE ====================  */
+
+@media (max-width: 1024px) {
+  .stats-panel {
+    position: static;
+    top: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-panel {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .stats-header h2 {
+    font-size: 16px;
+  }
+
+  .kpi-value {
+    font-size: 24px;
+  }
+
+  .chart-container {
+    min-height: 250px;
+  }
+}

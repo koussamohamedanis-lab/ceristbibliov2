@@ -1,0 +1,1652 @@
+======================================================================
+         COMPRENDRE LE PROJET CERIST BIBLIO-PLATFORM 
+   (Explication simplifiée pour les non-informaticiens et les jurys)
+======================================================================
+
+1. L'OBJECTIF DU PROJET (Pourquoi avons-nous créé cela ?)
+----------------------------------------------------------------------
+En Algérie, la recherche scientifique est très active, mais il est souvent difficile pour les décideurs de mesurer l'impact réel des laboratoires, des équipes et des chercheurs. 
+La "CERIST Biblio-Platform" est une plateforme web moderne conçue pour résoudre ce problème. 
+
+Son but est de faire le pont entre :
+- Les données publiques de recherche (articles publiés, citations, H-index).
+- La structure hiérarchique réelle de l'Algérie (Tutelle -> Institution -> Laboratoire -> Équipe -> Chercheur).
+
+Au lieu que chaque chercheur calcule son "H-index" (sa note de performance) dans son coin, cette plateforme calcule automatiquement et dynamiquement les scores de groupes entiers sans faire d'erreurs (sans compter deux fois le même article écrit par deux chercheurs de la même équipe).
+
+
+2. COMMENT ÇA MARCHE À L'INTÉRIEUR ? (L'Architecture Globale)
+----------------------------------------------------------------------
+Imaginez un très grand restaurant. Notre projet est divisé de la même manière :
+
+A. LA FAÇADE / LA SALLE (Le "Frontend" - React.js)
+C'est ce que l'utilisateur voit sur son écran (les boutons, les graphiques, les formulaires). 
+-> Logique utilisée : C'est conçu de façon "réactive". Si une donnée change, le graphique se redessine tout seul sans avoir besoin de rafraîchir la page Web.
+
+B. LA CUISINE (Le "Backend" - Python & FastAPI)
+C'est le cerveau caché. Quand vous cliquez sur "Voir les statistiques", la salle envoie le serveur en cuisine. La cuisine récupère les ingrédients, prépare le plat (fait les calculs), et le renvoie.
+-> Pourquoi FastAPI ? Parce que c'est l'un des moteurs les plus rapides au monde, capable de traiter des milliers d'articles scientifiques en quelques microsecondes.
+
+C. LE GARDE-MANGER (La "Base de données" - PostgreSQL)
+C'est là où nous rangeons tout : les mots de passe cryptés, les noms des laboratoires, et les articles.
+-> Logique utilisée : On utilise des relations solides. Impossible de créer une "Équipe" si elle n'appartient pas à un "Laboratoire". Cela s'appelle l'intégrité des données.
+
+D. LE SCIENTIFIQUE EXTERNE (Bibliometrix + Langage R)
+C'est notre robot spécial. Pour les calculs mathématiques très compliqués (ex: Les cartes thématiques des mots-clés ou l'impact collaboratif), le Python passe le relais à un programme spécialisé en données (le langage "R"). Une fois fini, "R" redonne le résultat à "Python", qui le renvoie à votre écran.
+
+
+3. LA HIÉRARCHIE ET LES RÔLES DE LA PLATEFORME
+----------------------------------------------------------------------
+Le système est conçu avec un principe de "séparation stricte". Chacun ne voit que ce qu'il a le droit de voir (Multi-tenancy).
+
+Niveau 1 : Le Chercheur
+-> Il connecte son compte à "OpenAlex" (la grande base de données mondiale de la recherche).
+-> Il voit son H-index personnel, ses citations, et peut mettre à jour son profil protégé par un mot de passe obligatoire.
+
+Niveau 2 : Le Chef d'Équipe
+-> Il peut "recruter" (ajouter) des chercheurs de la base vers son équipe.
+-> La plateforme fusionne les publications de toute son équipe pour calculer le vrai "H-Index de groupe" (Bibliometrie avancée).
+-> Il a un "Radar" qui compare la performance de ses membres.
+
+Niveau 3 : Le Chef de Laboratoire
+-> Il crée les équipes et nomme les Chefs d'Équipe.
+-> Il peut comparer la performance globale de ses différentes équipes.
+
+Niveau 4 : Le Directeur d'Institution (ex: Le Recteur de l'Université)
+-> Il gère tous les laboratoires.
+-> Il a une vue "Macro" de l'université, mais peut "creuser" (Drill-down) pour voir un labo, puis une équipe, puis un chercheur spécifique.
+
+Niveau 5 : La Tutelle (ex: Le Ministère - DGRSDT, MESRS)
+-> Vue globale nationale. Ce rôle a les droits suprêmes pour créer les universités/institutions, mais ne voit que les institutions sous sa propre tutelle.
+
+
+4. LA SYNTAXE ET LES DÉCISIONS INTELLIGENTES DU CODE (Soft Delete & Sécurité)
+----------------------------------------------------------------------
+Pour garantir un produit professionnel, des techniques avancées ont été codées :
+
+- "Soft Delete" (Suppression douce) : Dans le code, si un Chef retire un membre de son équipe, le chercheur n'est *pas physiquement effacé* de la base de données. On change juste une petite variable "is_active" à "Faux", ou on enlève son étiquette d'équipe. Ainsi, l'université ne perd jamais l'historique des publications d'un chercheur.
+
+- "Multi-tenancy sécurisé" : À chaque fois qu'une requête part en base de données, la logique SQL ajoute toujours un cadenas automatique : "Si ce directeur demande la liste des labos, montre M-O-I uniquement les labos OÙ institution_id = SON institution". Impossible de pirater ou de "voir" les labos du voisin.
+
+- Graphiques Innovants (Recharts) : La bibliothèque de dessin ne fait pas que des camemberts. Elle fait des Nuages de dispersion (Scatter Charts) pour classer les mots-clés selon s'ils sont "Moteurs, De niche, Émergents ou De base".
+
+- "Cascading Selects" : Lors de la création d'un compte, la logique est en cascade. On choisit l'Institution, ce qui débloque uniquement SES laboratoires, ce qui débloque ensuite uniquement SES équipes. Tout est filtré en temps réel depuis la "Cuisine".
+
+----------------------------------------------------------------------
+EN CONCLUSION :
+La CERIST Biblio-Platform n'est pas juste un tableau d'affichage ; c'est un outil d'aide à la décision complexe capable d'isoler des données de manière hermétique, tout en fusionnant des bases de connaissances mondiales (OpenAlex) avec une analyse statistique poussée (Bibliometrix via R).
+
+======================================================================
+
+PARTIE 2 : EXPLICATION TECHNIQUE DÉTAILLÉE DE TOUS LES FICHIERS
+======================================================================
+
+5. BACKEND - LA CUISINE (Python avec FastAPI)
+----------------------------------------------------------------------
+
+5.1 LE FICHIER DE DÉMARRAGE : main.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from database import engine, Base
+from routers import auth, institutions, users, hierarchy
+
+app = FastAPI(title="CERIST Bibliométrie API")
+
+# CORS : Permet à React (port 5173) de communiquer avec Python (port 8000)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # L'adresse Web de React
+    allow_credentials=True,
+    allow_methods=["*"],  # GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],
+)
+
+# Inclusion des routes (les "chemins" des requêtes)
+app.include_router(auth.router)
+app.include_router(users.router)
+```
+
+Explication :
+- FastAPI: C'est le "moteur" qui écoute les demandes de React et répond.
+- CORS: Sans cela, React ne pourrait pas parler au serveur Python.
+- routers: Ce sont des branchements. Chaque requête suit son chemin.
+
+
+5.2 LA BASE DE DONNÉES : database.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+# Connexion PostgreSQL
+DATABASE_URL = "postgresql://user:password@localhost/ceristbiblio"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+Explication :
+- PostgreSQL: C'est où l'on stocke les données (les utilisateurs, les articles, les équipes).
+- Engine: C'est le lien magique qui dit "Hey PostgreSQL, j'ai besoin de parler avec ta base ceristbiblio".
+- get_db(): Une fonction qui crée une "conversation" avec la base, l'utilise, puis la ferme proprement.
+
+
+5.3 LES MODÈLES DE DONNÉES : models.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe (Exemple avec class User):
+```python
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+
+class User(Base):
+    __tablename__ = "users"  # Nom de la table PostgreSQL
+    
+    # Colonnes
+    id = Column(Integer, primary_key=True)  # Clé unique auto-générée
+    email = Column(String(255), unique=True)  # Email unique
+    password_hash = Column(String(255))  # Mot de passe CHIFFRÉ (jamais en clair!)
+    role = Column(String(50), default="chercheur")  # Rôle de l'utilisateur
+    institution_id = Column(Integer, ForeignKey("institutions.id"))  # Clé étrangère
+    
+    # Relation (lie cet utilisateur à son institution)
+    institution = relationship("Institution", back_populates="users")
+```
+
+Explication des rôles :
+- CHERCHEUR: Un scientifique. Voit seul ses articles et peut modifier son profil.
+- CHEF_EQUIPE: Gère une équipe. Peut voir les stats fusionnées de son équipe.
+- CHEF_LABO: Gère un laboratoire. Voit les stats de tous les labos.
+- DIRECTEUR: Dirige une institution. Vue complète de l'université.
+- TUTELLE: La tutelle (Ministère). Autorisé à créer les institutions et voir les stats nationales.
+
+Structure hiérarchique :
+```
+Tutelle (Ministère)
+    └── Institution (Université)
+        └── Laboratoire
+            └── Équipe
+                └── Chercheur
+```
+
+
+5.4 LES SCHÉMAS DE VALIDATION : schemas.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe (Exemple):
+```python
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+
+class UserCreate(BaseModel):
+    """Schéma de validation pour la création d'utilisateur"""
+    nom: str  # Chaîne, obligatoire
+    email: EmailStr  # Email valide
+    password: str
+    role: Optional[str] = "chercheur"  # Optionnel, par défaut "chercheur"
+    institution_id: int
+
+class UserResponse(BaseModel):
+    """Schéma pour la réponse API"""
+    id: int
+    nom: str
+    email: str
+    role: str
+```
+
+Explication (Pourquoi c'est utile ?) :
+Imaginez que React envoie une requête avec un email vide. Sans validation, cela va remplir la base avec des données pourries.
+Avec schemas.py, FastAPI refuse AUTOMATIQUEMENT la requête et dit "Erreur ! L'email ne peut pas être vide."
+
+
+5.5 LES ROUTES (Endpoints API) : routers/auth.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```python
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+import jwt
+from datetime import datetime, timedelta
+
+router = APIRouter(prefix="/auth", tags=["Auth"])
+
+# Endpoint de connexion
+@router.post("/login")
+def login(email: str, password: str, db: Session = Depends(get_db)):
+    """
+    L'utilisateur envoie un POST à /auth/login
+    avec son email et mot de passe
+    """
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user or not bcrypt.verify(password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    
+    # Créer un JWT (jeton de confiance)
+    payload = {
+        "user_id": user.id,
+        "exp": datetime.utcnow() + timedelta(hours=24)  # Expire après 24 heures
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    
+    return {"access_token": token, "token_type": "bearer"}
+```
+
+Explication :
+- POST /auth/login: React envoie l'email et le mot de passe
+- bcrypt.verify(): Compare le mot de passe entré avec le hash stocké (sans jamais montrer le mot de passe!)
+- JWT: Un petit ticket de confiance que React gardera. À chaque requête future, React l'envoie pour dire "C'est moi, j'ai le jeton!"
+
+
+5.6 LES SERVICES AVANCÉS : services/bibliometrix.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```python
+def calculate_group_h_index(publications: list) -> dict:
+    """
+    Calcule le H-index d'une équipe/groupe
+    """
+    # Dédupliquer les publications (ne pas compter deux fois la même)
+    merged = merge_publications_no_duplicates(publications)
+    
+    # Extraire les citations
+    citations = [int(p.get('cited_by_count', 0)) for p in merged]
+    sorted_cit = sorted(citations, reverse=True)
+    
+    # Calcul du H-index (via R via subprocess si disponible, sinon Python)
+    h_index = 0
+    for i, c in enumerate(sorted_cit, 1):
+        if c >= i:
+            h_index = i
+        else:
+            break
+    
+    return {
+        "h_index": h_index,
+        "total_publications": len(merged),
+        "total_citations": sum(citations),
+        "method": "bibliometrix_r ou bibliometrix_python"
+    }
+```
+
+Explication (Cas pratique) :
+Si une équipe a 5 publications avec :
+- Article 1: 50 citations
+- Article 2: 30 citations
+- Article 3: 20 citations
+- Article 4: 10 citations
+- Article 5: 5 citations
+
+H-index = 4, car 4 articles ont au moins 4 citations (50, 30, 20, 10).
+L'article 5 a seulement 5 citations, donc on s'arrête.
+
+
+5.7 ROUTES DE GESTION HIÉRARCHIQUE : routers/hierarchy_management.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe (Exemple brut d'une restriction basée sur le rôle):
+```python
+@router.get("/team/{team_id}/members")
+def get_team_members(team_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Obtenir les membres d'une équipe
+    RESTRICTION: Seul le CHEF_EQUIPE ou CHEF_LABO de cette équipe peut voir cela
+    """
+    
+    # Chercher l'équipe
+    team = db.query(Equipe).filter(Equipe.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Équipe non trouvée")
+    
+    # SÉCURITÉ : Vérifier que l'utilisateur est autorisé
+    if current_user.role not in ["chef_equipe", "chef_labo"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    
+    # S'il est chef_equipe, vérifier qu'il est le chef de CETTE équipe spécifique
+    if current_user.role == "chef_equipe" and current_user.id != team.chef_equipe_id:
+        raise HTTPException(status_code=403, detail="Vous n'êtes pas le chef de cette équipe")
+    
+    # Retourner les membres
+    members = db.query(User).filter(User.equipe_id == team_id).all()
+    return [{"id": m.id, "nom": m.nom, "email": m.email} for m in members]
+```
+
+Explication de la logique de sécurité :
+1. Qui appelle cette fonction ? C'est current_user (exploré via le JWT du token).
+2. Quel est son rôle ? S'il est "chercheur", on refuse (403 - Forbidden).
+3. S'il est "chef_equipe", on vérifie qu'il est le chef DE CETTE ÉQUIPE (pas une autre).
+4. Enfin, on retourne les données.
+
+PRINCIPES DE SÉCURITÉ INTENSES :
+- Jamais de confiance aveugle. Chaque requête doit être validée.
+- Principe du "Minimum Privilege" : Donne seulement ce qui est nécessaire.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+6. FRONTEND - LA SALLE (React.js)
+----------------------------------------------------------------------
+
+6.1 LE POINT D'ENTRÉE : App.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```javascript
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+
+function App() {
+  // État : Est-ce que l'utilisateur est connecté ?
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem('access_token')
+  });
+
+  // Effet : Écouter les changements de stockage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('access_token')
+      setIsAuthenticated(!!token)
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  return (
+    <BrowserRouter>
+      {isAuthenticated ? (
+        <>
+          <Sidebar />
+          <main className="main-content">
+            <Header />
+            <Routes>
+              <Route path="/" element={<DashboardProfil />} />
+              <Route path="/team-management" element={<TeamManagement />} />
+              {/* ... d'autres routes ... */}
+            </Routes>
+          </main>
+        </>
+      ) : (
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      )}
+    </BrowserRouter>
+  );
+}
+```
+
+Explication (Concept de flux):
+- Si isAuthenticated = true: Affiche la Sidebar, les routes protégées.
+- Si isAuthenticated = false: Redirige vers /login
+- useState: Crée une variable d'état réactive. Dès qu'elle change, la page se redessine.
+- useEffect: S'exécute une seule fois au démarrage, puis écoute les changements.
+
+
+6.2 COMPOSANT DE PROTECTION DE ROUTE : components/ProtectedRoute.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```javascript
+import { Navigate } from "react-router-dom";
+
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const token = localStorage.getItem('access_token');
+  const userRole = localStorage.getItem('user_role');
+
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    return <div>Accès refusé. Vous n'avez pas les droits nécessaires.</div>;
+  }
+
+  return children;
+};
+```
+
+Explication :
+- Chaque page "sensible" (TeamManagement, LabManagement, etc.) est enrobée par ProtectedRoute.
+- Si le token n'existe pas => Redirection vers /login
+- Si le rôle n'est pas dans la liste allowedRoles => Message d'erreur
+
+
+6.3 COMPOSANT D'AUTHENTIFICATION : pages/Login.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe (simplifiée):
+```javascript
+import { useState } from "react";
+import axios from "axios";
+
+function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post("http://localhost:8000/auth/login", {
+        email: email,
+        password: password
+      });
+
+      // Récupérer le token JWT
+      const token = response.data.access_token;
+      
+      // Stocker dans localStorage (mémoire du navigateur)
+      localStorage.setItem('access_token', token);
+      localStorage.setItem('user_role', response.data.user_role);
+      
+      // Redirection vers le dashboard
+      window.location.href = "/";
+      
+    } catch (err) {
+      setError("Email ou mot de passe incorrect");
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <h1>Connexion</h1>
+      <input 
+        type="email" 
+        value={email} 
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Votre email"
+      />
+      <input 
+        type="password" 
+        value={password} 
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Votre mot de passe"
+      />
+      <button onClick={handleLogin}>Se connecter</button>
+      {error && <div className="error-message">{error}</div>}
+    </div>
+  );
+}
+```
+
+Explication complète :
+1. L'utilisateur tape son email et mot de passe
+2. handleLogin: Envoie une requête POST au serveur Python
+3. Si succès: Stocke le token JWT dans localStorage
+4. Si erreur: Affiche un message rouge
+
+
+6.4 COMPOSANT DE CONTEXTE POUR LA RECHERCHE : context/SearchContext.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```javascript
+import { createContext, useContext, useState } from "react";
+
+const SearchContext = createContext();
+
+export function SearchProvider({ children }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const performSearch = async (query) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        `http://localhost:8000/search?q=${query}`,
+        {
+          headers: { "Authorization": `Bearer ${localStorage.getItem('access_token')}` }
+        }
+      );
+      setSearchResults(response.data);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <SearchContext.Provider value={{ searchQuery, setSearchQuery, searchResults, performSearch, isLoading }}>
+      {children}
+    </SearchContext.Provider>
+  );
+}
+
+export function useSearch() {
+  return useContext(SearchContext);
+}
+```
+
+Explication (Pourquoi SearchContext ?) :
+Au lieu de passer les données de recherche de composant en composant en chaîne (compliqué), on crée un contexte GLOBAL qui n'importe quel composant peut utiliser.
+
+Utilisation dans un composant :
+```javascript
+function MyComponent() {
+  const { searchQuery, performSearch } = useSearch();
+  return <div>Recherche actuelle: {searchQuery}</div>;
+}
+```
+
+
+6.5 COMPOSANT DE GRAPHIQUE : components/PublicationsChart.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe (avec Recharts):
+```javascript
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+
+function PublicationsChart({ data }) {
+  // data = [{year: 2020, count: 5}, {year: 2021, count: 8}, ...]
+  
+  return (
+    <BarChart width={600} height={300} data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="year" />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+      <Bar dataKey="count" fill="#8884d8" />
+    </BarChart>
+  );
+}
+```
+
+Explication :
+- Recharts: Bibliothèque de graphiques pour React.
+- DataKey: Indique quelle clé des données afficher sur l'axe Y.
+- Cette fonction affiche un graphique en barres du nombre de publications par année.
+
+
+6.6 COMPOSANT D'UPLOAD ET GESTION DE FICHIERS : pages/SystemConfiguration.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Syntaxe :
+```javascript
+function SystemConfiguration() {
+  const [file, setFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState("");
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setUploadStatus("Veuillez sélectionner un fichier");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      await axios.post(
+        "http://localhost:8000/upload/users",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${localStorage.getItem('access_token')}`
+          }
+        }
+      );
+      setUploadStatus("Fichier uploadé avec succès!");
+    } catch (error) {
+      setUploadStatus("Erreur lors de l'upload");
+    }
+  };
+
+  return (
+    <div>
+      <h2>Importer des utilisateurs (CSV)</h2>
+      <input type="file" onChange={handleFileChange} accept=".csv" />
+      <button onClick={handleUpload}>Importer</button>
+      {uploadStatus && <p>{uploadStatus}</p>}
+    </div>
+  );
+}
+```
+
+Explication :
+- FormData: Classe JavaScript pour envoyer des fichiers.
+- multipart/form-data: Le type MIME pour les fichiers.
+- Le backend reçoit le fichier CSV et le traite ligne par ligne.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+7. PATTERNS DE SÉCURITÉ AVANCÉS UTILISÉS
+----------------------------------------------------------------------
+
+7.1 JWT (JSON Web Token) POUR L'AUTHENTIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Concept :
+```
+                CLIENT (React)                    SERVEUR (FastAPI)
+                ════════════                      ══════════════════
+    1. POST /login [email, password]  ──────────>
+                                       <─────────  JWT "eyJhbGciOi..."
+    2. localStorage.setItem('access_token', JWT)
+    
+    3. GET /profile [Header: Authorization: Bearer JWT] ──────>
+                                        <────────  Profile data
+```
+
+Syntaxe JWT :
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
+eyJ1c2VyX2lkIjogMSwgImV4cCI6IDE2ODE5MzQ1NDd.
+TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+
+Partie 1 (Header): Quel algorithme ? (HS256 = HMAC with SHA256)
+Partie 2 (Payload): Les données (user_id, date expiration)
+Partie 3 (Signature): Preuve que c'est vrai (seulement le serveur peut créer cette signature)
+```
+
+Pourquoi JWT est sûr ?
+- La signature empêche quelqu'un de modifier le token (ex: changer user_id de 2 en 456).
+- Expiration: Après 24 heures, le token est invalide.
+- Sans mot de passe stocké dans localStorage (dangereux!), seulement le token.
+
+
+7.2 HACHAGE DES MOTS DE PASSE AVEC BCRYPT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Concept :
+```python
+import bcrypt
+
+# 1. Quand l'utilisateur crée un compte avec mot de passe "Azerty123"
+password = "Azerty123"
+hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=12))
+# hashed = "$2b$12$abc...xyz" (complètement différent du mot de passe!)
+
+# 2. On stocke CELA dans la base de données, pas "Azerty123"
+user.password_hash = hashed
+
+# 3. Quand l'utilisateur se connecte
+entered_password = "Azerty123"
+if bcrypt.verify(entered_password.encode(), user.password_hash):
+    print("Connexion réussie!")
+else:
+    print("Mot de passe incorrect")
+```
+
+Pourquoi bcrypt ?
+- Les mots de passe ne sont jamais stockés en clair.
+- Même si quelqu'un vole la base de données, les mots de passe sont inintelligibles.
+- 12 rounds: C'est extrêmement long à "casser" par force brute.
+
+
+7.3 ISOLATION DES DONNÉES PAR RÔLE (Multi-tenancy)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Concept de filtre automatique en SQL :
+```python
+# Quand un DIRECTEUR demande "Donne-moi tous les labos"
+@router.get("/laboratories")
+def get_laboratories(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role == "directeur":
+        # Ajouter un filtre automatique
+        query = db.query(Laboratoire).filter(
+            Laboratoire.institution_id == current_user.institution_id  # ← CADENAS!
+        )
+    elif current_user.role == "chef_labo":
+        query = db.query(Laboratoire).filter(
+            Laboratoire.id == current_user.labo_id
+        )
+    else:
+        raise HTTPException(status_code=403, detail="Pas autorisé")
+    
+    return query.all()
+```
+
+Résultat :
+- Un directeur de l'université X ne verra JAMAIS les laboratoires de l'université Y.
+- Même si quelqu'un essaie d'écrire une URL malveillante : "/laboratory?id=999"
+- Le filtre interceptera et refusera (user_institution ≠ lab_institution).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+8. FICHIERS DE CONFIGURATION ET OUTILS
+----------------------------------------------------------------------
+
+8.1 FICHIER D'ENVIRONNEMENT : .env
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Contenu :
+```
+DATABASE_URL=postgresql://user:password@localhost:5432/ceristbiblio
+SECRET_KEY=your-secret-key-here-very-long-random-string
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=24
+OPENALEX_API_URL=https://api.openalex.org
+```
+
+Pourquoi .env (pas directement dans le code) ?
+- Secrets: Le DATABASE_URL contient le mot de passe PostgreSQL.
+- Portabilité: Sur votre machine, ça dit "localhost". Sur le serveur, ça dit "db.production.com".
+- Sécurité: On n'expose pas les clés secrètes dans le Git.
+
+
+8.2 REQUIREMENTS PYTHON : Backend/requirements.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Contenu :
+```
+fastapi==0.104.1          # Framework Web
+uvicorn==0.24.0           # Serveur ASGI
+sqlalchemy==2.0.23        # ORM pour PostgreSQL
+psycopg2-binary==2.9.9    # Driver PostgreSQL
+pydantic==2.5.0           # Validation des données
+PyJWT==2.12.1             # Tokens JWT
+bcrypt==4.1.1             # Hachage des mots de passe
+python-dotenv==1.0.0      # Charger les variables d'environnement
+```
+
+Commande pour installer :
+```bash
+pip install -r requirements.txt
+```
+
+
+8.3 PACKAGE.JSON (FRONTEND) : ceristbiblio_platform/package.json
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Contenu (résumé):
+```json
+{
+  "name": "ceristbiblio_platform",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^6.x.x",
+    "axios": "^1.6.0",
+    "recharts": "^2.10.0"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1",
+    "@vitejs/plugin-react": "^4.x.x"
+  }
+}
+```
+
+Commandes :
+```bash
+npm install    # Installe les dépendances
+npm run dev    # Lance le serveur de développement (port 5173)
+npm run build  # Crée une version compressée pour la production
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+9. FLUX D'EXÉCUTION COMPLET (D'UN BOUT À L'AUTRE)
+----------------------------------------------------------------------
+
+Scénario : Un CHEF_EQUIPE veut voir les statistiques H-Index de son équipe
+
+ÉTAPE 1: React - Clic sur "Mon Équipe"
+┌─────────────────────────────────────┐
+│ Utilisateur clique sur le bouton     │
+│ "Statistiques de mon équipe"         │
+└─────────────────────────────────────┘
+                    │
+                    ↓
+ÉTAPE 2: React - Vérifier l'authentification
+┌─────────────────────────────────────┐
+│ ProtectedRoute vérifie:              │
+│ - isAuthenticated = true?            │
+│ - user.role en ["chef_equipe", ...]? │
+│ → Oui? Afficher la page              │
+└─────────────────────────────────────┘
+                    │
+                    ↓
+ÉTAPE 3: React - Faire une requête API
+┌─────────────────────────────────────┐
+│ axios.get(                           │
+│   "/team/42/statistics",             │
+│   headers: {                         │
+│     Authorization: "Bearer JWT..."   │
+│   }                                  │
+│ )                                    │
+└─────────────────────────────────────┘
+                    │
+                    (requête HTTP)
+                    ↓
+ÉTAPE 4: FastAPI - Recevoir et valider
+┌─────────────────────────────────────┐
+│ @router.get("/team/{team_id}/stat")  │
+│ def get_team_stats(team_id: int,     │
+│                    current_user:...):│
+│                                      │
+│ 1. Décoder le JWT du header          │
+│ 2. Vérifier: current_user.id existe? │
+│ 3. Vérifier: owner de team_id?       │
+│ 4. Si tout OK: continuer             │
+└─────────────────────────────────────┘
+                    │
+                    ↓
+ÉTAPE 5: FastAPI - Récupérer les données
+┌─────────────────────────────────────┐
+│ FROM PostgreSQL:                     │
+│ - SELECT * FROM equipes              │
+│   WHERE id = 42                      │
+│ - SELECT * FROM users                │
+│   WHERE equipe_id = 42 AND is_active │
+│ - SELECT * FROM publications         │
+│   WHERE author_id IN (...)           │
+└─────────────────────────────────────┘
+                    │
+                    ↓
+ÉTAPE 6: FastAPI - Calculer le H-Index
+┌─────────────────────────────────────┐
+│ bibliometrix.calculate_group_h_index │
+│ (publications_list)                  │
+│                                      │
+│ → Appeler Rscript                    │
+│ → Récupérer le résultat JSON         │
+│ → Retourner h_index, g_index, i10..  │
+└─────────────────────────────────────┘
+                    │
+                    ↓
+ÉTAPE 7: FastAPI - Formater la réponse
+┌─────────────────────────────────────┐
+│ return {                             │
+│   "h_index": 8,                      │
+│   "g_index": 12,                     │
+│   "i10_index": 6,                    │
+│   "total_publications": 25,          │
+│   "members": [                       │
+│     { "name": "Alice", ... },        │
+│     { "name": "Bob", ... }           │
+│   ]                                  │
+│ }                                    │
+└─────────────────────────────────────┘
+                    │
+                    (réponse JSON)
+                    ↓
+ÉTAPE 8: React - Recevoir et afficher
+┌─────────────────────────────────────┐
+│ const [stats, setStats] = useState() │
+│                                      │
+│ useEffect(() => {                   │
+│   axios.get(...)                    │
+│   .then(response => setStats(...))   │
+│ }, [])                               │
+│                                      │
+│ // La page se redessinée              │
+│ // Affiche: H-index = 8               │
+│ // Affiche un graphique               │
+└─────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+10. POINTS CLÉS DE CODE À RETENIR
+----------------------------------------------------------------------
+
+❶ BACKEND - main.py: Application principale
+❷ BACKEND - models.py: Structure des données (ORM SQLAlchemy)
+❸ BACKEND - schemas.py: Validation des entrées (Pydantic)
+❹ BACKEND - routers/*: Les "routes" de l'API
+❺ BACKEND - database.py: Connexion PostgreSQL
+
+❻ FRONTEND - App.jsx: Routeur principal et logique d'authentification
+❼ FRONTEND - ProtectedRoute.jsx: Protéger les pages par rôle
+❽ FRONTEND - context/SearchContext.jsx: Partage de données globales
+❾ FRONTEND - pages/*.jsx: Les différentes "vues" de l'application
+❿ FRONTEND - axios.js: Les appels API
+
+❿❶ SÉCURITÉ: JWT + bcrypt + Multi-tenancy
+❿❷ CALCULS: R via subprocess (Bibliometrix pour H-index, G-index, i10-index)
+❿❸ DONNÉES: PostgreSQL avec relations strictes (Foreign Keys)
+
+
+════════════════════════════════════════════════════════════════════
+
+FIN DE L'EXPLICATION TECHNIQUE
+
+Vous avez maintenant une compréhension complète du projet:
+- Son objectif global
+- Son architecture (Backend + Frontend + Database)
+- Les fichiers clés et leur rôle
+- La sécurité (JWT, bcrypt, Multi-tenancy)
+- Le flux complet d'une requête utilisateur
+
+================================================
+
+PARTIE 3 : DOCUMENTATION COMPLÈTE DE TOUTES LES PAGES
+================================================
+
+11. PAGES D'AUTHENTIFICATION
+----------------------------------------------------------------------
+
+11.1 PAGE DE CONNEXION : Login.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Rôle : Permettre à n'importe quel utilisateur de se connecter
+
+Syntaxe clé :
+```javascript
+const [email, setEmail] = useState('')
+const [password, setPassword] = useState('')
+
+const handleLogin = async (e) => {
+  // Envoyer email + password au backend
+  const response = await login(email, password)
+  
+  // Stocker les données dans localStorage
+  localStorage.setItem('access_token', response.data.access_token)
+  localStorage.setItem('userId', response.data.user_id)
+  localStorage.setItem('userRole', response.data.role)
+  localStorage.setItem('userName', response.data.nom)
+  
+  // Rediriger
+  window.location.href = '/'
+}
+```
+
+Flux d'action :
+1. Utilisateur entre email+password
+2. Clique sur "Se connecter"
+3. Envoi POST à /auth/login (backend)
+4. Backend valide les credentials (bcrypt)
+5. Backend crée un JWT token
+6. Frontend stocke le token
+7. Redirection vers /dashboard
+
+
+11.2 PAGE D'ENREGISTREMENT : Register.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Rôle : Créer un nouveau compte utilisateur
+
+Champs requis :
+```
+- nom (string)
+- prenom (string)
+- email (EmailStr - validation incluse)
+- password (string, min 8 chars)
+- institution_id (int, obligatoire)
+- role (default: chercheur)
+```
+
+Logique :
+- L'utilisateur choisit une institution dans une dropdown
+- Les institutions se chargent depuis /institutions
+- Après enregistrement, redirection vers /login
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+12. PAGES DE DASHBOARD ET STATISTIQUES
+----------------------------------------------------------------------
+
+12.1 DASHBOARD PROFIL : DashboardProfil.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+C'est LA page d'accueil. Elle affiche différentes choses selon le rôle.
+
+Syntaxe :
+```javascript
+useEffect(() => {
+  const userRole = localStorage.getItem('userRole')
+  
+  if (userRole === 'chef_labo') {
+    // Fetch stats du laboratoire
+    const stats = await api.get('/hierarchy/labos/me/stats')
+  } else if (userRole === 'directeur') {
+    // Fetch stats du directeur
+    const stats = await api.get('/hierarchy/statistics/director/{id}')
+  } else if (userRole === 'tutelle') {
+    // Fetch stats globales
+    const stats = await api.get('/hierarchy/statistics/global')
+  } else {
+    // Chercheur: stats personnelles
+    const stats = await api.get('/api/users/{id}/stats')
+  }
+}, [])
+```
+
+Affichages :
+- Pour CHERCHEUR : Son H-index personnel, ses articles
+- Pour CHEF_EQUIPE : H-index de l'équipe, stats comparatives
+- Pour CHEF_LABO : H-index du labo, stats de toutes les équipes
+- Pour DIRECTEUR : Vue complète de l'université
+- Pour TUTELLE : Vue nationale
+
+Composants utilisés :
+- KPICard : Affiche les métriques clés (H-index, Citations, Publications)
+- PublicationsChart : Graphique barres par année
+- PublicationsTable : Tableau des articles
+- ProfileBadges : Badges de certification/badges de performance
+
+
+12.2 STATISTIQUES GLOBALES : GlobalStatistics.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Accessible uniquement par : TUTELLE et DIRECTEUR
+
+Affiche les chiffres clés :
+```javascript
+{
+  total_directors: 5,           // Nombre de directeurs
+  total_laboratories: 45,       // Nombre de labos
+  total_teams: 120,             // Nombre d'équipes
+  total_researchers: 2000,      // Nombre de chercheurs
+  total_publications: 15000,    // Publications totales
+  total_citations: 500000,      // Citations totales
+  avg_h_index: 8.5              // H-index moyen
+}
+```
+
+Visuel :
+- Cards pour chaque métrique
+- Graphiques de tendance annuels
+- Comparatif inter-institutions
+
+
+12.3 VUE HIÉRARCHIQUE TUTELLE : TutelleMode.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Page spéciale pour l'administrateur TUTELLE (Ministère)
+
+Permet :
+- Créer de nouvelles institutions
+- Voir tous les directeurs
+- Comparer les performances par université
+- Vue complète du système
+
+Syntaxe :
+```javascript
+const [institutions, setInstitutions] = useState([])
+
+useEffect(() => {
+  const data = await api.get('/hierarchy/institutions/all')
+  setInstitutions(data)
+}, [])
+
+// Afficher chaque institution avec ses labos et équipes
+institutions.map(inst => (
+  <div key={inst.id}>
+    <h3>{inst.name}</h3>
+    <p>H-Index moyen: {inst.avg_h_index}</p>
+    <p>Publications: {inst.total_publications}</p>
+  </div>
+))
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+13. PAGES DE GESTION HIÉRARCHIQUE
+----------------------------------------------------------------------
+
+13.1 GESTION DES ÉQUIPES : TeamManagement.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Qui peut y accéder ? CHEF_EQUIPE, CHEF_LABO
+
+Fonctionnalités :
+1. Afficher les membres de l'équipe (tous les utilisateurs avec equipe_id = mon équipe)
+2. Chercher et ajouter des nouveaux membres
+3. Voir les statistiques fusionnées de l'équipe
+4. Supprimer des membres
+
+Syntaxe :
+```javascript
+const [teamMembers, setTeamMembers] = useState([])
+const [teamStats, setTeamStats] = useState({})
+
+const fetchData = async () => {
+  const userId = localStorage.getItem('userId')
+  
+  // Membres
+  const members = await api.get(`/api/teams/${userId}`)
+  setTeamMembers(members.data)
+  
+  // Stats (H-index fusionné)
+  const stats = await api.get(`/api/teams/${userId}/bibliometrics`)
+  setTeamStats(stats.data)
+}
+
+const addMember = async (memberId) => {
+  await api.post(`/api/teams/${userId}/add-member`, {
+    user_id: memberId
+  })
+  fetchData() // Rafraîchir
+}
+
+const removeMember = async (memberId) => {
+  await api.delete(`/api/teams/${userId}/members/${memberId}`)
+  fetchData()
+}
+```
+
+Affichage des stats de l'équipe :
+```
+H-Index de l'équipe: 12  (fusionné de tous les membres)
+G-Index de l'équipe: 18
+i10-Index: 8
+Publications totales: 45
+Citations totales: 890
+```
+
+Graphiques :
+- LineChart : Évolution du nombre de publications par année
+- RadarChart : Comparatif des performances des membres
+- BarChart : Distribution des citations par membre
+
+
+13.2 GESTION DES LABORATOIRES : LabManagement.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Qui peut y accéder ? CHEF_LABO, DIRECTEUR
+
+Fonctionnalités :
+- Afficher toutes les équipes du laboratoire
+- Stats fusionnées du labo entier
+- Créer de nouvelles équipes
+- Assigner des chefs d'équipe
+- Voir les performances comparatives
+
+Syntaxe :
+```javascript
+const labId = localStorage.getItem('laboId')
+
+const fetchData = async () => {
+  // Equipes du labo
+  const equipes = await api.get(`/hierarchy/laboratories/${labId}/teams`)
+  
+  // Stats du labo (H-index de TOUS les chercheurs du labo)
+  const stats = await api.get(`/hierarchy/laboratories/${labId}/stats`)
+}
+
+const createTeam = async (teamName, description) => {
+  await api.post(`/hierarchy/laboratories/${labId}/teams`, {
+    nom: teamName,
+    description: description
+  })
+}
+```
+
+Affichage :
+- Liste des équipes avec leurs chefs
+- Pour chaque équipe: nombre de membres, H-index, publications
+- Graphique de performance comparée
+
+
+13.3 GESTION DES UTILISATEURS : UserManagement.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Qui peut y accéder ? DIRECTEUR, CHEF_LABO, TUTELLE
+
+Chaque rôle peut créer des rôles "inferieurs" :
+```javascript
+const ALLOWED_CREATION_ROLES = {
+  tutelle: ['directeur', 'chef_labo', 'chef_equipe', 'chercheur'],
+  directeur: ['chef_labo', 'chef_equipe', 'chercheur'],
+  chef_labo: ['chef_equipe', 'chercheur'],
+  chef_equipe: [],  // Ne peut créer personne
+  chercheur: []
+}
+```
+
+Fonctionnalités :
+```javascript
+const canManageUser = (targetUser) => {
+  // Ne peut gérer que les rôles inférieurs
+  return ALLOWED_CREATION_ROLES[currentRole].includes(targetUser.role)
+}
+
+const createUser = async (formData) => {
+  // email, password, role, institution_id, labo_id, equipe_id
+  await api.post('/api/users/create', formData)
+}
+
+const editUser = async (userId, newData) => {
+  await api.put(`/api/users/${userId}`, newData)
+}
+
+const deleteUser = async (userId) => {
+  // Soft delete (is_active = false)
+  await api.delete(`/api/users/${userId}`)
+}
+```
+
+Affichage :
+- Tableau de tous les utilisateurs accessibles
+- Filtre par rôle
+- Modal pour créer/éditer utilisateur
+- Bouton supprimer (soft delete)
+
+
+13.4 STRUCTURE INSTITUTIONNELLE : InstitutionalStructure.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Qui peut y accéder ? DIRECTEUR, TUTELLE
+
+Affiche un arbre hiérarchique :
+```
+Institution: Université A
+├── Laboratoire: Labo Informatique
+│   ├── Équipe: IA & Machine Learning
+│   │   ├── Chercheur: Alice
+│   │   ├── Chercheur: Bob
+│   ├── Équipe: Sécurité
+│   │   ├── Chercheur: Charlie
+├── Laboratoire: Labo Chimie
+│   └── Équipe: Chimie Organique
+│       └── Chercheur: David
+```
+
+Syntaxe :
+```javascript
+const [hierarchyData, setHierarchyData] = useState(null)
+
+const fetchHierarchy = async () => {
+  const inst_id = localStorage.getItem('institutionId')
+  const data = await api.get(`/hierarchy/institution/${inst_id}`)
+  setHierarchyData(data.data)
+}
+
+// Composant HierarchicalExplorer affiche l'arbre
+<HierarchicalExplorer data={hierarchyData} />
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+14. PAGES DE RECHERCHE ET PUBLICATION
+----------------------------------------------------------------------
+
+14.1 PAGES OPENALEX : OpenAlex.jsx, Sources.jsx, Authors.jsx, Documents.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ces pages permettent de chercher dans la base OpenAlex (une base mondiale de recherche)
+
+OpenAlex.jsx - Recherche principale :
+```javascript
+const [searchQuery, setSearchQuery] = useState('')
+const [results, setResults] = useState([])
+
+const handleSearch = async (keyword) => {
+  setSearchQuery(keyword)
+  const res = await api.get(`/search/openalex?q=${keyword}`)
+  setResults(res.data)
+}
+
+// Résultats peuvent être des articles, des auteurs, ou des sources
+```
+
+Authors.jsx - Recherche d'auteurs :
+```
+Affiche: Nom, Affiliation, H-index, Nombre d'articles
+```
+
+Sources.jsx - Recherche de journaux :
+```
+Affiche: Nom du journal, Impact Factor, Nombre d'articles publiés
+```
+
+Documents.jsx - Recherche d'articles :
+```
+Affiche: Titre, Auteurs, Année, Citations, PDF link
+```
+
+Résultat des pages :
+```javascript
+// Quand l'utilisateur clique sur un résultat
+const handleSelectPublication = (pubId) => {
+  // Ajouter à list personnelle
+  await api.post(`/api/users/me/publications/${pubId}`)
+  // Or ajouter à l'équipe
+  await api.post(`/api/teams/me/publications/${pubId}`)
+}
+```
+
+
+14.2 MES PUBLICATIONS : MyPublications.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+Affiche TOUTES les publications de l'utilisateur connecté
+
+Syntaxe :
+```javascript
+const userId = localStorage.getItem('userId')
+
+const fetchMyPublications = async () => {
+  const pubs = await api.get(`/api/users/${userId}/publications`)
+  setPublications(pubs.data)
+}
+
+// Affichage en tableau
+// Colonnes: Titre, Auteurs, Année, Citations, H-index contribution
+```
+
+Actions possibles :
+- Synchroniser avec OpenAlex (mettre à jour citations)
+- Supprimer une publication
+- Exporter en CSV/PDF
+- Voir le détail d'une publication
+
+
+14.3 RÉSULTATS DE RECHERCHE : Results.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+Affiche les résultats après une recherche
+
+Syntaxe :
+```javascript
+import { useSearch } from '../context/SearchContext'
+
+function Results() {
+  const { searchResults, isLoading } = useSearch()
+  
+  return (
+    <div className="results-container">
+      {isLoading && <p>Chargement...</p>}
+      {searchResults.map(result => (
+        <div key={result.id} className="result-card">
+          <h3>{result.title}</h3>
+          <p>Auteurs: {result.authors.join(', ')}</p>
+          <button onClick={() => addToTeam(result.id)}>Ajouter à l'équipe</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+15. PAGES DE COMPARAISON ET ANALYSE
+----------------------------------------------------------------------
+
+15.1 PAGE DE COMPARAISON : Comparaison.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+Permet de comparer les performances de plusieurs chercheurs/équipes
+
+Syntaxe :
+```javascript
+const [selectedMembers, setSelectedMembers] = useState([])
+const [comparisonData, setComparisonData] = useState(null)
+
+const handleAddToComparison = (memberId) => {
+  setSelectedMembers([...selectedMembers, memberId])
+}
+
+const performComparison = async () => {
+  const memberIds = selectedMembers.join(',')
+  const data = await api.get(
+    `/api/comparison/members?ids=${memberIds}`
+  )
+  // Retourne: { h_index, publications, citations } pour chaque membre
+  setComparisonData(data.data)
+}
+```
+
+Affichage :
+- Tableau comparatif des métriques
+- Graphiques radar (chaque sommet = une métrique)
+- Graphiques barres côte à côte
+
+
+15.2 PAGE DE RAPPORTS : Rapports.jsx
+━━━━━━━━━━━━━━━━━━━━━━
+
+Génère des rapports détaillés (PDF, table au format professionnel)
+
+Fonctionnalités :
+```javascript
+const generateReport = async (format: 'pdf' | 'csv' | 'excel') => {
+  const report = await api.post('/reports/generate', {
+    format: format,
+    type: 'team_statistics',  // ou institution, laboratory, etc.
+    include: ['h_index', 'citations', 'publications', 'trends']
+  })
+  
+  // Télécharger le fichier
+  const url = window.URL.createObjectURL(new Blob([report.data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `rapport_${Date.now()}.${format}`)
+  link.click()
+}
+```
+
+Contenu des rapports :
+- Couverture avec logo, date, institution
+- Statistiques générales (H-index, publications, citations)
+- Graphiques de tendance
+- Tableau détaillé des publications
+- Analyse comparative avec la moyenne nationale
+- Recommandations
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+16. PAGES DE CONFIGURATION
+----------------------------------------------------------------------
+
+16.1 PARAMÈTRES UTILISATEUR : Settings.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+Accessible par tous les utilisateurs
+
+Permet :
+```javascript
+// 1. Changer le mot de passe
+const changePassword = async (oldPassword, newPassword) => {
+  await api.post('/auth/change-password', {
+    old_password: oldPassword,
+    new_password: newPassword
+  })
+}
+
+// 2. Mettre à jour le profil
+const updateProfile = async (data) => {
+  await api.put('/auth/profile/me', {
+    nom: data.nom,
+    prenom: data.prenom,
+    email: data.email,
+    // ...autres champs
+  })
+}
+
+// 3. Lier/délier compte OpenAlex
+const linkOpenAlex = async (authorId) => {
+  await api.post('/auth/profile/openalex', {
+    author_id: authorId
+  })
+}
+
+// 4. Préférences (langue, thème, notifications)
+const updatePreferences = async (prefs) => {
+  await api.put('/auth/preferences', prefs)
+}
+```
+
+
+16.2 CONFIGURATION SYSTÈME : SystemConfiguration.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+Accessible par TUTELLE et DIRECTEUR uniquement
+
+Permet :
+```javascript
+// 1. Créer une institution
+const createInstitution = async (data) => {
+  await api.post('/hierarchy/institutions', {
+    nom: data.nom,
+    ville: data.ville,
+    adresse: data.adresse
+  })
+}
+
+// 2. Importer utilisateurs en masse (CSV)
+const importUsers = async (csvFile) => {
+  const formData = new FormData()
+  formData.append('file', csvFile)
+  
+  await api.post('/import/users', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+// 3. Synchroniser les données avec OpenAlex (batch)
+const syncWithOpenAlex = async () => {
+  // Lance une tâche en arrière-plan
+  await api.post('/sync/openalex-batch')
+}
+
+// 4. Voir les logs système
+const viewLogs = async () => {
+  const logs = await api.get('/admin/logs')
+  return logs.data
+}
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+17. PAGES DE DEBUG/TEST
+----------------------------------------------------------------------
+
+17.1 HELLO WORLD : HelloWorld.jsx
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Page de test simpl (affiche juste "Bonjour")
+
+17.2 HIERARCHY DEBUG : HierarchyDebug.jsx, HierarchySimple.jsx, HierarchyMinimal.jsx
+━━━━━━━━━━━━━━━━━━━━━━
+
+Pages de test de la hiérarchie (visualisation de l'arbre)
+
+Permettent de tester :
+- La structure des données
+- L'affichage de l'arbre
+- Les performances avec un grand nombre de nœuds
+
+
+17.3 OVERVIEW : Overview.jsx
+━━━━━━━━━━━━━━━━━━━━━
+
+Vue générale simple (résumé des stats)
+
+
+════════════════════════════════════════════════════════════════════
+
+TABLEAU RÉCAPITULATIF DE TOUTES LES PAGES
+════════════════════════════════════════════════════════════════════
+
+PAGE                      RÔLES              FONCTION PRINCIPALE
+─────────────────────────────────────────────────────────────────
+Login.jsx                 PUBLIC             Connexion utilisateur
+Register.jsx              PUBLIC             Création de compte
+DashboardProfil.jsx       TOUS               Page d'accueil (personnalisée par rôle)
+GlobalStatistics.jsx      TUTELLE/DIR        Statistiques nationales/universitaires
+TutelleMode.jsx           TUTELLE            Vue administrative complète
+TeamManagement.jsx        CHEF_E/CHEF_L      Gestion de l'équipe/labo
+LabManagement.jsx         CHEF_L/DIRECTEUR   Gestion du laboratoire
+UserManagement.jsx        CHEF_L/DIRECTEUR   Gestion des utilisateurs
+InstitutionalStructure    DIRECTEUR/TUTELLE  Arbre hiérarchique
+OpenAlex.jsx              TOUS               Recherche OpenAlex (articles)
+Authors.jsx               TOUS               Recherche d'auteurs
+Sources.jsx               TOUS               Recherche de journaux
+Documents.jsx             TOUS               Recherche de publications
+MyPublications.jsx        TOUS               Afficher mes publications
+Results.jsx               TOUS               Résultats de recherche
+Comparaison.jsx           TOUS               Comparer chercheurs/équipes
+Rapports.jsx              TOUS               Générer des rapports PDF
+Settings.jsx              TOUS               Paramètres utilisateur
+SystemConfiguration.jsx   TUTELLE/DIRECTEUR  Admin système
+HelloWorld.jsx            TEST               Test simple
+HierarchyDebug.jsx        TEST               Debug arbre hiérarchique
+Overview.jsx              TEST               Aperçu simple
+
+
+════════════════════════════════════════════════════════════════════
+
+MATRICE DE PERMISSIONS PAR RÔLE
+════════════════════════════════════════════════════════════════════
+
+CHERCHEUR:
+  ✅ Voir Dashboard personnel
+  ✅ Afficher ses publications
+  ✅ Rechercher sur OpenAlex
+  ✅ Modifier son profil
+  ❌ Gérer une équipe/labo
+  ❌ Créer des utilisateurs
+
+CHEF_EQUIPE:
+  ✅ Voir Dashboard + stats d'équipe
+  ✅ Gérer les membres de l'équipe
+  ✅ Voir TeamManagement
+  ✅ Créer des chercheurs
+  ❌ Gérer le laboratoire entier
+  ❌ Voir les autres équipes du labo
+
+CHEF_LABO:
+  ✅ Voir Dashboard + stats du labo
+  ✅ Gérer les équipes du labo
+  ✅ Créer des chefs d'équipe
+  ✅ Voir InstitutionalStructure
+  ✅ Accéder à SystemConfiguration (limité)
+  ❌ Gérer d'autres labos
+  ❌ Gérer les directeurs
+
+DIRECTEUR:
+  ✅ Vue complète de l'institution
+  ✅ Gérer tous les labos et équipes
+  ✅ Créer des chefs de labo
+  ✅ Voir GlobalStatistics
+  ✅ Générer des rapports
+  ✅ Gestion système complète
+  ❌ Gérer les tutelles
+  ❌ Modifier institutions d'autres directeurs
+
+TUTELLE (Ministère):
+  ✅ Vue COMPLÈTE du système
+  ✅ Créer/modifier institutions
+  ✅ Créer des directeurs
+  ✅ Voir les stats nationales
+  ✅ Admin système complet
+  ✅ Import/Export en masse
+  ✅ Synchronisation OpenAlex globale
+
+
+════════════════════════════════════════════════════════════════════
+
+FIN DE LA DOCUMENTATION DES PAGES
+
+================================================

@@ -1,0 +1,112 @@
+# ================================================================================
+# ACCÈS PLATEFORME BIBLIOMÉTRIQUE CERIST
+# ================================================================================
+# Mot de passe par défaut : Cerist_2026!
+# Note : Le changement de mot de passe est obligatoire à la première connexion.
+# ================================================================================
+
+ID   | EMAIL                                | ROLE            | NOM / PRENOM
+--------------------------------------------------------------------------------
+8    | tutelle.dgrsdt@cerist.dz             | tutelle         | DGRSDT
+9    | tutelle.mesrs@cerist.dz              | tutelle         | MESRS
+80   | researcher.a5082473579@cerist.dz     | directeur       | Chaoui Allaoua
+110  | researcher.a5070176127@cerist.dz     | directeur       | Belkheir Boussad
+81   | researcher.a5076150607@cerist.dz     | chef_labo       | Slimani Samy
+87   | researcher.a5061442182@cerist.dz     | chef_labo       | Idoui Tayeb
+93   | researcher.a5022155866@cerist.dz     | chef_labo       | Zidani Abdelmadjid
+97   | researcher.a5108284508@cerist.dz     | chef_labo       | Lamri Salim
+103  | researcher.a5030519441@cerist.dz     | chef_labo       | Ghozlane F.
+107  | researcher.a5031337758@cerist.dz     | chef_labo       | Majour Habiba
+113  | researcher.a5053832771@cerist.dz     | chef_labo       | LABBACI Madani
+117  | researcher.a5111948080@cerist.dz     | chef_labo       | Ouahab A.
+78   | researcher.a5020141143@cerist.dz     | chef_equipe     | Benbouhenni Habib
+79   | researcher.a5054239976@cerist.dz     | chef_equipe     | Sari Tewfik
+82   | researcher.a5077905852@cerist.dz     | chef_equipe     | Bouraiou Ahmed
+83   | researcher.a5067531124@cerist.dz     | chef_equipe     | Djebali Smaïl
+86   | researcher.a5111972167@cerist.dz     | chef_equipe     | Doghmane A.
+88   | researcher.a5057840131@cerist.dz     | chef_equipe     | Kardjadj Moustafa
+89   | researcher.a5035385261@cerist.dz     | chef_equipe     | Arbouche Fodil
+92   | researcher.a5000094783@cerist.dz     | chef_equipe     | Khanchoul Kamel
+94   | researcher.a5046850113@cerist.dz     | chef_equipe     | Suheil Gaouar Semir Bechir
+95   | researcher.a5020328715@cerist.dz     | chef_equipe     | Algeria
+98   | researcher.a5040189015@cerist.dz     | chef_equipe     | Bendaoud Fayssal
+99   | researcher.a5011943981@cerist.dz     | chef_equipe     | Latreche Abdelhakim
+104  | researcher.a5103590637@cerist.dz     | chef_equipe     | Hadef Azzedine
+108  | researcher.a5043581224@cerist.dz     | chef_equipe     | al-Zirāʿī Algeria
+109  | researcher.a5055988548@cerist.dz     | chef_equipe     | Djaout Amal
+114  | researcher.a5075638807@cerist.dz     | chef_equipe     | Bouchefra Amina
+118  | researcher.a5015937787@cerist.dz     | chef_equipe     | Sahraoui Hossem
+128  | researcher.a5013680095@cerist.dz     | chef_equipe     | El-Bouyahiaoui Rachid
+129  | researcher.a5121654778@cerist.dz     | chef_equipe     | Algeria Renewable Energy
+177  | researcher.a5089722882@cerist.dz     | chef_equipe     | Benbouhenni Habib
+
+# --- CHERCHEURS ---
+90   | researcher.a5061036526@cerist.dz     | chercheur       | Ameur Abdelkader Ameur
+96   | researcher.a5085931679@cerist.dz     | chercheur       | Bellifa Samia
+100  | researcher.a5057395597@cerist.dz     | chercheur       | Berredjem Hajira
+101  | researcher.a5050745844@cerist.dz     | chercheur       | Rogti Maroua
+102  | researcher.a5035179296@cerist.dz     | chercheur       | Titaouine A.
+105  | researcher.a5047678298@cerist.dz     | chercheur       | Afri-Bouzebda Farida
+106  | researcher.a5005010603@cerist.dz     | chercheur       | Messirdi Sofiane
+111  | researcher.a5073773899@cerist.dz     | chercheur       | al-Waṭanīyah Algeria
+112  | researcher.a5010289530@cerist.dz     | chercheur       | Chorfi Atef
+115  | researcher.a5017370202@cerist.dz     | chercheur       | Fantazi Khaled
+116  | researcher.a5063546093@cerist.dz     | chercheur       | Seddiki Lamia Salima
+120  | researcher.a5037259634@cerist.dz     | chercheur       | Silva A.
+121  | researcher.a5121457926@cerist.dz     | chercheur       | Algiers Algeria
+122  | researcher.a5022725709@cerist.dz     | chercheur       | wa-al-Thaqāfah Algeria
+123  | researcher.a5082676496@cerist.dz     | chercheur       | Djaout Amel
+124  | researcher.a5052319765@cerist.dz     | chercheur       | Meneceur R.
+125  | researcher.a5024034193@cerist.dz     | chercheur       | Rahal Ourida
+126  | researcher.a5112877485@cerist.dz     | chercheur       | Halimi Mokhtar
+127  | researcher.a5111128719@cerist.dz     | chercheur       | Amar A.M. Meimine A.
+130  | researcher.a5034677698@cerist.dz     | chercheur       | Emme James J.
+131  | researcher.a5121130612@cerist.dz     | chercheur       | Algeria Laboratoire
+132  | researcher.a5121867357@cerist.dz     | chercheur       | Algeria LEMEAMED
+133  | researcher.a5050757079@cerist.dz     | chercheur       | Bechlaghem A.
+134  | researcher.a5036268437@cerist.dz     | chercheur       | Sidhoumi Noura
+135  | researcher.a5021663842@cerist.dz     | chercheur       | Mohammed Benyarou
+136  | researcher.a5121482538@cerist.dz     | chercheur       | Algeria Renewable
+137  | researcher.a5121648718@cerist.dz     | chercheur       | Algeria Unit
+138  | researcher.a5121346993@cerist.dz     | chercheur       | Algeria Advanced
+139  | researcher.a5088453171@cerist.dz     | chercheur       | Dendouga Soraya
+140  | researcher.a5121454761@cerist.dz     | chercheur       | Ghardaia Algeria
+141  | researcher.a5009884925@cerist.dz     | chercheur       | Plan Algeria
+142  | researcher.a5019021765@cerist.dz     | chercheur       | Chekal Fakhedine
+143  | researcher.a5121510275@cerist.dz     | chercheur       | Algeria Unité
+144  | researcher.a5073304615@cerist.dz     | chercheur       | Moulla Farid
+145  | researcher.a5008063958@cerist.dz     | chercheur       | Algeria Algiers
+146  | researcher.a5121219661@cerist.dz     | chercheur       | Algeria Centre
+147  | researcher.a5048673174@cerist.dz     | chercheur       | Boukhrissa Z.A.
+148  | researcher.a5121635025@cerist.dz     | chercheur       | Algeria Laboratory
+149  | researcher.a5043726109@cerist.dz     | chercheur       | Bendjaouahdou Mohamed
+150  | researcher.a5038693952@cerist.dz     | chercheur       | wa-al-Thaqāfah Algeria
+151  | researcher.a5111128719@cerist.dz     | chercheur       | Abdelhadi Derrar
+152  | researcher.a5120912768@cerist.dz     | chercheur       | Laboratory University
+153  | researcher.a5121461476@cerist.dz     | chercheur       | Algiers Algeria
+154  | researcher.a5005130219@cerist.dz     | chercheur       | Zergoun Youcef
+155  | researcher.a5051952041@cerist.dz     | chercheur       | Mohamed Touba Mostefa
+156  | researcher.a5108660705@cerist.dz     | chercheur       | Mohamed Benidir
+157  | researcher.a5121915804@cerist.dz     | chercheur       | Algeria Laboratory
+158  | researcher.a5122195577@cerist.dz     | chercheur       | ESI Algeria
+159  | researcher.a5121678028@cerist.dz     | chercheur       | Algéria University
+160  | researcher.a5121838563@cerist.dz     | chercheur       | Algeria Department
+161  | researcher.a5121877684@cerist.dz     | chercheur       | Batna Advanced
+162  | researcher.a5121486269@cerist.dz     | chercheur       | Algeria Unité
+163  | researcher.a5121661113@cerist.dz     | chercheur       | 22000 Algéria
+164  | researcher.a5007102244@cerist.dz     | chercheur       | plan Algeria
+165  | researcher.a5028091297@cerist.dz     | chercheur       | Ford Algeria R.
+166  | researcher.a5112810192@cerist.dz     | chercheur       | D' Castellini
+167  | researcher.a5094624146@cerist.dz     | chercheur       | Adrar Algeria
+168  | researcher.a5072970636@cerist.dz     | chercheur       | Silva Algéria Varela
+169  | researcher.a5120887209@cerist.dz     | chercheur       | Algeria Institute
+170  | researcher.a5121846928@cerist.dz     | chercheur       | Algeria Abdelhafid
+171  | researcher.a5071409144@cerist.dz     | chercheur       | Asmaa H. Mahmoud
+172  | researcher.a5054136541@cerist.dz     | chercheur       | Abdesselem Rabhi
+173  | researcher.a5121250763@cerist.dz     | chercheur       | Algeria Laboratory
+174  | researcher.a5124807398@cerist.dz     | chercheur       | Algeria Université
+175  | researcher.a5054369324@cerist.dz     | chercheur       | Algeria Algiers
+176  | researcher.a5121016162@cerist.dz     | chercheur       | Algeria Badji Mokhtar
+
+# URL : http://localhost:5173
+# Password : Cerist_2026!
