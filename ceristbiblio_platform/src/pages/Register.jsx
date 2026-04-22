@@ -40,6 +40,8 @@ export default function Register() {
     password: '',
     confirmPassword: '',
     author_id_openalex: '',
+    phone_number: '',
+    date_of_birth: '',
     // Org selections
     tutelle_id: '',
     institution_id: '',
@@ -137,6 +139,11 @@ export default function Register() {
       return
     }
 
+    if (!formData.date_of_birth) {
+      setError('La date de naissance est obligatoire')
+      return
+    }
+
     setLoading(true)
     try {
       let response
@@ -149,6 +156,8 @@ export default function Register() {
             password: formData.password,
             equipe_id: parseInt(formData.equipe_id),
             author_id_openalex: formData.author_id_openalex || null,
+            phone_number: formData.phone_number || null,
+            date_of_birth: formData.date_of_birth || null,
           })
           break
         case 'chef_equipe':
@@ -160,6 +169,8 @@ export default function Register() {
             labo_id: parseInt(formData.labo_id),
             equipe_name: formData.equipe_name,
             author_id_openalex: formData.author_id_openalex || null,
+            phone_number: formData.phone_number || null,
+            date_of_birth: formData.date_of_birth || null,
           })
           break
         case 'chef_labo':
@@ -170,6 +181,8 @@ export default function Register() {
             password: formData.password,
             institution_id: parseInt(formData.institution_id),
             labo_name: formData.labo_name,
+            phone_number: formData.phone_number || null,
+            date_of_birth: formData.date_of_birth || null,
           })
           break
         case 'directeur':
@@ -181,6 +194,8 @@ export default function Register() {
             tutelle_id: parseInt(formData.tutelle_id),
             institution_name: formData.institution_name,
             ville: formData.ville || 'Algérie',
+            phone_number: formData.phone_number || null,
+            date_of_birth: formData.date_of_birth || null,
           })
           break
         default:
@@ -527,6 +542,37 @@ export default function Register() {
           <span className="auth-hint">Permet de synchroniser automatiquement vos publications</span>
         </div>
       )}
+
+      <div className="auth-row">
+        <div className="auth-form-group">
+          <label className="auth-label">Date de naissance <span style={{ color: 'var(--accent-red)' }}>*</span></label>
+          <input
+            type="date"
+            name="date_of_birth"
+            value={formData.date_of_birth}
+            onChange={handleChange}
+            required
+            className="auth-input"
+            id="input-date-of-birth"
+            max={new Date().toISOString().split('T')[0]}
+          />
+          <span className="auth-hint">Obligatoire et non modifiable après inscription</span>
+        </div>
+        <div className="auth-form-group">
+          <label className="auth-label">
+            Téléphone <span className="auth-label-optional">(optionnel)</span>
+          </label>
+          <input
+            type="tel"
+            name="phone_number"
+            value={formData.phone_number}
+            onChange={handleChange}
+            placeholder="Ex: +213 555 123 456"
+            className="auth-input"
+            id="input-phone"
+          />
+        </div>
+      </div>
 
       <div className="auth-form-group">
         <label className="auth-label">Mot de passe</label>

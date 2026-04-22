@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
@@ -69,6 +69,11 @@ class User(Base):
     
     # Profils externes (provisoirement dans les métadonnées JSON)
     author_id_openalex = Column(String(100), unique=True, nullable=True)
+    
+    # Informations de profil supplémentaires
+    phone_number = Column(String(20), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    profile_picture_url = Column(Text, nullable=True)
     
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=False)
@@ -141,3 +146,46 @@ class Notification(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     user_rel = relationship("User", backref="notifications")
+
+
+# ====================== MESSAGING MODELS ======================
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    type = Column(String(20), nullable=False)  # 'group' or 'private'
+    name = Column(String(255), nullable=True)  # Display name for groups
+    group_key = Column(String(100), unique=True, nullable=True, index=True)  # Unique key to prevent duplicate groups
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    members = relationship("ConversationMember", back_populates="conversation", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+
+
+class ConversationMember(Base):
+    __tablename__ = "conversation_members"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    joined_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    conversation = relationship("Conversation", back_populates="members")
+    user = relationship("User")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    content = Column(Text, nullable=True)  # Text content (null for pure file/audio messages)
+    type = Column(String(20), default="text")  # 'text', 'file', 'audio'
+    file_url = Column(Text, nullable=True)  # URL for uploaded files/audio
+    file_name = Column(String(255), nullable=True)  # Original filename
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    conversation = relationship("Conversation", back_populates="messages")
+    sender = relationship("User")

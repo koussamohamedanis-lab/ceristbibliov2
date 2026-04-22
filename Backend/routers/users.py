@@ -283,17 +283,20 @@ async def sync_publications_from_openalex(user_id: int, db: Session = Depends(ge
                 detail="Aucune publication trouvée sur OpenAlex pour ces IDs"
             )
         
-        # Ajouter les nouvelles publications sans les dupliquer
+        # Optimize by getting all existing publications in one query
+        work_ids = [work.get("id", "").replace("https://openalex.org/", "") for work in all_works]
+        existing_pubs = db.query(Publication).filter(Publication.openalex_id.in_(work_ids)).all()
+        existing_map = {p.openalex_id: p for p in existing_pubs}
+        
         added_count = 0
         for work in all_works:
-            # Vérifier si la publication existe déjà
-            existing_pub = db.query(Publication).filter(
-                Publication.openalex_id == work.get("id", "").replace("https://openalex.org/", "")
-            ).first()
+            work_id = work.get("id", "").replace("https://openalex.org/", "")
+            existing_pub = existing_map.get(work_id)
             
             if existing_pub:
                 # Mettre à jour l'utilisateur associé
                 existing_pub.user_id = user_id
+                existing_pub.cited_by_count = work.get("cited_by_count", 0)
             else:
                 # Créer une nouvelle publication
                 normalized_work = normalize_openalex_work(work)
@@ -390,10 +393,15 @@ async def sync_all_users_from_openalex(db: Session = Depends(get_db), current_us
                 results["failed"] += 1
                 continue
                 
+            work_ids = [work.get("id", "").replace("https://openalex.org/", "") for work in all_works]
+            existing_pubs = db.query(Publication).filter(Publication.openalex_id.in_(work_ids)).all()
+            existing_map = {p.openalex_id: p for p in existing_pubs}
+                
             added_count = 0
             for work in all_works:
                 work_id = work.get("id", "").replace("https://openalex.org/", "")
-                existing_pub = db.query(Publication).filter(Publication.openalex_id == work_id).first()
+                existing_pub = existing_map.get(work_id)
+                
                 if existing_pub:
                     existing_pub.user_id = r.id
                     # Update citation count if it changed

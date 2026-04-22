@@ -1,19 +1,10 @@
-"""
-Registration Router - Role-based registration with cascading organizational selection.
-
-This module handles:
-- Multi-step registration with role selection
-- Cascading organization selection (tutelle -> institution -> labo -> equipe)
-- Public endpoints to list organizations for registration forms
-- Password change (mandatory on first login)
-- Profile/settings update (author_id_openalex)
-"""
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import date
+import os, uuid, shutil
 from database import get_db
 from models import User, Institution, Laboratoire, Equipe, UserRole
 from routers.auth import get_current_user, get_password_hash, verify_password, create_access_token
@@ -21,6 +12,10 @@ from routers.auth import get_current_user, get_password_hash, verify_password, c
 router = APIRouter(prefix="/registration", tags=["Registration"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Ensure uploads directory exists
+UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "avatars")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 # ====================== SCHEMAS ======================
 
@@ -31,6 +26,8 @@ class RegisterChercheur(BaseModel):
     password: str
     equipe_id: int
     author_id_openalex: Optional[str] = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
 class RegisterChefEquipe(BaseModel):
     nom: str
@@ -40,6 +37,8 @@ class RegisterChefEquipe(BaseModel):
     labo_id: int
     equipe_name: str
     author_id_openalex: Optional[str] = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
 class RegisterChefLabo(BaseModel):
     nom: str
@@ -48,6 +47,8 @@ class RegisterChefLabo(BaseModel):
     password: str
     institution_id: int
     labo_name: str
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
 class RegisterDirecteur(BaseModel):
     nom: str
@@ -57,6 +58,8 @@ class RegisterDirecteur(BaseModel):
     tutelle_id: int
     institution_name: str
     ville: Optional[str] = "Algérie"
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
 class PasswordChange(BaseModel):
     current_password: str
@@ -66,6 +69,9 @@ class ProfileUpdate(BaseModel):
     author_id_openalex: Optional[str] = None
     nom: Optional[str] = None
     prenom: Optional[str] = None
+    phone_number: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+    # date_of_birth is intentionally excluded - cannot be modified after registration
 
 # ====================== PUBLIC ENDPOINTS FOR FORM DATA ======================
 
@@ -130,6 +136,8 @@ def register_chercheur(data: RegisterChercheur, db: Session = Depends(get_db)):
         labo_id=equipe.labo_id,
         institution_id=institution_id,
         author_id_openalex=data.author_id_openalex,
+        phone_number=data.phone_number,
+        date_of_birth=data.date_of_birth,
         is_active=True,
     )
     
@@ -183,6 +191,8 @@ def register_chef_equipe(data: RegisterChefEquipe, db: Session = Depends(get_db)
         labo_id=data.labo_id,
         institution_id=labo.institution_id,
         author_id_openalex=data.author_id_openalex,
+        phone_number=data.phone_number,
+        date_of_birth=data.date_of_birth,
         is_active=True,
     )
     db.add(new_user)
@@ -239,6 +249,8 @@ def register_chef_labo(data: RegisterChefLabo, db: Session = Depends(get_db)):
         role=UserRole.CHEF_LABO.value,
         labo_id=new_labo.id,
         institution_id=data.institution_id,
+        phone_number=data.phone_number,
+        date_of_birth=data.date_of_birth,
         is_active=True,
     )
     db.add(new_user)
@@ -297,6 +309,8 @@ def register_directeur(data: RegisterDirecteur, db: Session = Depends(get_db)):
         password_hash=get_password_hash(data.password),
         role=UserRole.DIRECTEUR.value,
         institution_id=new_institution.id,
+        phone_number=data.phone_number,
+        date_of_birth=data.date_of_birth,
         is_active=True,
     )
     db.add(new_user)
@@ -347,13 +361,18 @@ def change_password(data: PasswordChange, db: Session = Depends(get_db), current
 
 @router.put("/profile")
 def update_profile(data: ProfileUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Update profile settings (author_id_openalex, nom, prenom)"""
+    """Update profile settings (author_id_openalex, nom, prenom, phone_number, profile_picture_url).
+    date_of_birth is intentionally excluded and cannot be modified after registration."""
     if data.author_id_openalex is not None:
         current_user.author_id_openalex = data.author_id_openalex
     if data.nom is not None:
         current_user.nom = data.nom
     if data.prenom is not None:
         current_user.prenom = data.prenom
+    if data.phone_number is not None:
+        current_user.phone_number = data.phone_number
+    if data.profile_picture_url is not None:
+        current_user.profile_picture_url = data.profile_picture_url
     
     db.commit()
     db.refresh(current_user)
@@ -368,5 +387,52 @@ def update_profile(data: ProfileUpdate, db: Session = Depends(get_db), current_u
             "email": current_user.email,
             "role": current_user.role,
             "author_id_openalex": current_user.author_id_openalex,
+            "phone_number": current_user.phone_number,
+            "profile_picture_url": current_user.profile_picture_url,
         }
+    }
+
+
+@router.post("/upload-avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload a profile picture. Accepts image files up to 2MB. Returns the URL."""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé. Utilisez JPG, PNG, WebP ou GIF.")
+    
+    # Validate file size (2MB max)
+    contents = await file.read()
+    if len(contents) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="L'image ne doit pas dépasser 2 Mo.")
+    
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    filepath = os.path.join(UPLOADS_DIR, filename)
+    
+    # Delete old avatar if exists
+    if current_user.profile_picture_url:
+        old_filename = current_user.profile_picture_url.split("/")[-1]
+        old_path = os.path.join(UPLOADS_DIR, old_filename)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+    
+    # Save file
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    
+    # Update user record
+    avatar_url = f"/uploads/avatars/{filename}"
+    current_user.profile_picture_url = avatar_url
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Photo de profil mise à jour",
+        "profile_picture_url": avatar_url
     }

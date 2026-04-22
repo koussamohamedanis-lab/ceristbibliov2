@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 
 # ====================== ENUMS ======================
@@ -85,6 +85,8 @@ class UserCreate(BaseModel):
     institution_id: int
     labo_id: Optional[int] = None
     equipe_id: Optional[int] = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
 
 
 class UserResponse(BaseModel):
@@ -100,6 +102,9 @@ class UserResponse(BaseModel):
     institution_name: Optional[str] = None
     labo_name: Optional[str] = None
     equipe_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    profile_picture_url: Optional[str] = None
     is_active: Optional[bool] = True
     created_at: Optional[datetime] = None
     
@@ -114,6 +119,8 @@ class UserUpdate(BaseModel):
     author_id_openalex: Optional[str] = None
     labo_id: Optional[int] = None
     equipe_id: Optional[int] = None
+    phone_number: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     is_active: Optional[bool] = None
 
 

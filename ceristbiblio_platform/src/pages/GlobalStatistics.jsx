@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import '../assets/dashboard.css';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ScatterChart, Scatter, ZAxis, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
-import { FaBook, FaUsers, FaFlask, FaTrophy, FaUserTie, FaNetworkWired, FaQuoteRight } from 'react-icons/fa';
+import { FaBook, FaUsers, FaFlask, FaTrophy, FaUserTie, FaNetworkWired, FaQuoteRight, FaBullseye, FaStar } from 'react-icons/fa';
 import api from '../services/api';
 
 function GlobalStatistics() {
@@ -32,7 +32,9 @@ function GlobalStatistics() {
         total_researchers: data.total_researchers || 0,
         total_publications: data.total_publications || 0,
         total_citations: data.total_citations || 0,
-        avg_h_index: data.avg_h_index || 0
+        avg_h_index: data.avg_h_index || 0,
+        g_index: data.g_index || 0,
+        i10_index: data.i10_index || 0
       });
 
       // Fetch advanced bibliometric mapping globally (auto-scoped by backend for tutelle, directeur, etc)
@@ -117,6 +119,25 @@ function GlobalStatistics() {
             </div>
           </div>
 
+          <div className="kpi-card">
+            <div className="kpi-icon" style={{ backgroundColor: 'rgba(245, 158, 11, 0.12)' }}>
+              <FaBullseye style={{ color: 'var(--accent-amber)' }} />
+            </div>
+            <div className="kpi-content">
+              <p className="kpi-title">G-Index Global</p>
+              <p className="kpi-value">{statistics?.g_index || 0}</p>
+            </div>
+          </div>
+
+          <div className="kpi-card">
+            <div className="kpi-icon" style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)' }}>
+              <FaStar style={{ color: 'var(--accent-red)' }} />
+            </div>
+            <div className="kpi-content">
+              <p className="kpi-title">i10-Index Global</p>
+              <p className="kpi-value">{statistics?.i10_index || 0}</p>
+            </div>
+          </div>
           <div className="kpi-card">
             <div className="kpi-icon" style={{ backgroundColor: 'var(--accent-teal-light)' }}>
               <FaQuoteRight style={{ color: 'var(--accent-teal)' }} />

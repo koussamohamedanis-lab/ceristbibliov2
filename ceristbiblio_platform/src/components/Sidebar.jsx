@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { 
   FaHome, FaDatabase, FaCompass, FaChartBar, 
   FaChevronDown, FaUsers, FaBuilding, FaChartLine, FaCog, FaNetworkWired, FaBalanceScale, FaFileAlt,
-  FaSignOutAlt
+  FaSignOutAlt, FaRobot, FaComments
 } from "react-icons/fa";
 
 function Sidebar() {
@@ -142,6 +142,16 @@ function Sidebar() {
           </>
         )}
 
+        {/* ASSISTANT IA - Tous les rôles */}
+        {!isCollapsed && <p className="section-title">OUTILS</p>}
+        <NavLink to="/messaging" className="nav-item">
+          <FaComments className="icon-svg" />
+          {!isCollapsed && <span>Messagerie</span>}
+        </NavLink>
+        <NavLink to="/assistant-ia" className="nav-item">
+          <FaRobot className="icon-svg" />
+          {!isCollapsed && <span>Assistant IA</span>}
+        </NavLink>
 
       </div>
     </aside>

@@ -25,7 +25,7 @@ const DashboardProfil = () => {
         let userName = localStorage.getItem('userName')
         let userEmail = localStorage.getItem('userEmail')
         let userRole = localStorage.getItem('userRole')
-        
+
         // If data is missing or "null", fetch profile
         if (!userName || userName.includes('null') || !userRole) {
           const profileRes = await api.get('/auth/profile/me')
@@ -34,7 +34,7 @@ const DashboardProfil = () => {
           userRole = profile.role
           userName = `${profile.prenom} ${profile.nom}`
           userEmail = profile.email
-          
+
           localStorage.setItem('userId', userId)
           localStorage.setItem('userRole', userRole)
           localStorage.setItem('userName', userName)
@@ -53,7 +53,7 @@ const DashboardProfil = () => {
           console.log('Fetching statistics from API...')
           const userRole = localStorage.getItem('userRole')
           let statsResponse;
-          
+
           if (userRole === 'chef_labo') {
             // Stats aggrégées du laboratoire
             statsResponse = await api.get('/hierarchy/labos/me/stats')
@@ -67,9 +67,9 @@ const DashboardProfil = () => {
             // Chercheur standard
             statsResponse = await api.get(`/api/users/${userId}/stats`)
           }
-          
+
           console.log('Statistics received:', statsResponse.data)
-          
+
           // Mettre à jour les stats
           setStats({
             h_index: statsResponse.data.h_index || statsResponse.data.avg_h_index || 0,
@@ -82,7 +82,7 @@ const DashboardProfil = () => {
 
           // Créer les données pour le graphique
           const yearlyData = statsResponse.data.publications_by_year || statsResponse.data.publication_by_year || {}
-          
+
           // Gérer le format du retour (peut être un objet ou un tableau [année, count])
           let chartDataFormatted = []
           if (Array.isArray(yearlyData)) {
@@ -99,7 +99,7 @@ const DashboardProfil = () => {
                 count: yearlyData[year]
               }))
           }
-          
+
           setChartData(chartDataFormatted)
         } catch (apiErr) {
           console.log('Could not fetch statistics from API:', apiErr.message)
@@ -110,7 +110,7 @@ const DashboardProfil = () => {
           console.log('Fetching publications from API...')
           const pubsResponse = await api.get(`/api/users/${userId}/publications`)
           console.log('Publications received:', pubsResponse.data)
-          
+
           const publications = pubsResponse.data.publications || []
           setPublications(publications)
         } catch (apiErr) {
@@ -166,9 +166,11 @@ const DashboardProfil = () => {
       const pubsResponse = await api.get(`/api/users/${userId}/publications`)
 
       setPublications(pubsResponse.data.publications || [])
-      
+
       setStats({
         h_index: statsResponse.data.h_index || statsResponse.data.avg_h_index || 0,
+        g_index: statsResponse.data.g_index || 0,
+        i10_index: statsResponse.data.i10_index || 0,
         total_publications: statsResponse.data.total_publications || 0,
         total_citations: statsResponse.data.total_citations || 0,
         publications_by_year: statsResponse.data.publications_by_year || statsResponse.data.publication_by_year || {}
@@ -189,7 +191,7 @@ const DashboardProfil = () => {
             count: yearlyData[year]
           }))
       }
-      
+
       setChartData(chartDataFormatted)
 
       // Masquer le message après 5 secondes
@@ -231,31 +233,31 @@ const DashboardProfil = () => {
               Tableau de Bord {user?.name && user.name !== 'null' ? `- ${user.name}` : ''}
             </h1>
             <p className="dashboard-subtitle">
-              {user?.role === 'chercheur' ? 'Chercheur' : 
-               user?.role === 'chef_equipe' ? 'Chef d\'Équipe' :
-               user?.role === 'chef_labo' ? 'Chef de Laboratoire' :
-               user?.role === 'directeur' ? 'Directeur' :
-               user?.role === 'tutelle' ? 'Tutelle' : user?.role}
+              {user?.role === 'chercheur' ? 'Chercheur' :
+                user?.role === 'chef_equipe' ? 'Chef d\'Équipe' :
+                  user?.role === 'chef_labo' ? 'Chef de Laboratoire' :
+                    user?.role === 'directeur' ? 'Directeur' :
+                      user?.role === 'tutelle' ? 'Tutelle' : user?.role}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button 
-              onClick={() => window.print()} 
+            <button
+              onClick={() => window.print()}
               className="export-btn"
               style={{ backgroundColor: 'var(--accent-blue)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               title="Exporter le dashboard en PDF"
             >
               📄 Exporter PDF
             </button>
-            <button 
-              onClick={syncPublications} 
+            <button
+              onClick={syncPublications}
               disabled={syncing}
               className="sync-button"
               title={(user?.role === 'tutelle' || user?.role === 'directeur') ? "Lancer la mise à jour globale" : "Synchroniser les publications depuis OpenAlex"}
             >
               <FiRefreshCw size={20} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
-              {syncing 
-                ? 'Synchronisation...' 
+              {syncing
+                ? 'Synchronisation...'
                 : ((user?.role === 'tutelle' || user?.role === 'directeur') ? 'Maj Globale' : 'Synchroniser OpenAlex')}
             </button>
           </div>

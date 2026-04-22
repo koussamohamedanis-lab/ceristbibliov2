@@ -1,18 +1,21 @@
-import { useState, useEffect } from 'react'
-import { FiLock, FiUser, FiSave, FiCheck, FiAlertCircle, FiLink } from 'react-icons/fi'
-import { changePassword, updateProfile, getMyProfile } from '../services/api'
+import { useState, useEffect, useRef } from 'react'
+import { FiLock, FiUser, FiSave, FiCheck, FiAlertCircle, FiLink, FiPhone, FiCalendar, FiCamera } from 'react-icons/fi'
+import { changePassword, updateProfile, getMyProfile, uploadAvatar } from '../services/api'
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile')
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   // Profile form
   const [profileForm, setProfileForm] = useState({
     nom: '',
     prenom: '',
     author_id_openalex: '',
+    phone_number: '',
   })
 
   // Password form
@@ -46,6 +49,7 @@ export default function Settings() {
         nom: res.data.nom || '',
         prenom: res.data.prenom || '',
         author_id_openalex: res.data.author_id_openalex || '',
+        phone_number: res.data.phone_number || '',
       })
     } catch (err) {
       console.error('Failed to load profile:', err)
@@ -63,6 +67,7 @@ export default function Settings() {
         nom: profileForm.nom || undefined,
         prenom: profileForm.prenom || undefined,
         author_id_openalex: profileForm.author_id_openalex || undefined,
+        phone_number: profileForm.phone_number || undefined,
       })
       setMessage({ type: 'success', text: res.data.message || 'Profil mis à jour' })
       // Update localStorage
@@ -74,6 +79,39 @@ export default function Settings() {
       setMessage({ type: 'error', text: err.response?.data?.detail || 'Erreur' })
     } finally {
       setSaving(false)
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000)
+    }
+  }
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Client-side validation
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({ type: 'error', text: 'Format non supporté. Utilisez JPG, PNG, WebP ou GIF.' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000)
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: 'error', text: "L'image ne doit pas dépasser 2 Mo." })
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000)
+      return
+    }
+
+    setUploading(true)
+    setMessage({ type: '', text: '' })
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await uploadAvatar(formData)
+      setMessage({ type: 'success', text: res.data.message || 'Photo mise à jour' })
+      loadProfile()
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.detail || "Erreur lors de l'upload" })
+    } finally {
+      setUploading(false)
       setTimeout(() => setMessage({ type: '', text: '' }), 5000)
     }
   }
@@ -119,6 +157,17 @@ export default function Settings() {
     return labels[role] || role
   }
 
+  const getInitials = (prenom, nom) => {
+    return ((prenom?.[0] || '') + (nom?.[0] || '')).toUpperCase() || 'U'
+  }
+
+  const getAvatarUrl = () => {
+    if (profile?.profile_picture_url) {
+      return `http://localhost:8000${profile.profile_picture_url}`
+    }
+    return null
+  }
+
   if (loading) {
     return <div className="dashboard-loading">Chargement...</div>
   }
@@ -140,8 +189,29 @@ export default function Settings() {
 
       {/* Profile Overview Card */}
       <div className="settings-profile-card">
-        <div className="settings-avatar">
-          {profile?.prenom?.[0]}{profile?.nom?.[0]}
+        <div className="settings-avatar-wrapper">
+          {getAvatarUrl() ? (
+            <img src={getAvatarUrl()} alt="Avatar" className="settings-avatar-img" />
+          ) : (
+            <div className="settings-avatar">
+              {getInitials(profile?.prenom, profile?.nom)}
+            </div>
+          )}
+          <button 
+            className="settings-avatar-edit-btn" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            title="Changer la photo de profil"
+          >
+            <FiCamera size={14} />
+          </button>
+          <input 
+            ref={fileInputRef}
+            type="file" 
+            accept="image/jpeg,image/png,image/webp,image/gif" 
+            onChange={handleAvatarUpload} 
+            style={{ display: 'none' }} 
+          />
         </div>
         <div className="settings-profile-info">
           <h2 className="settings-profile-name">{profile?.prenom} {profile?.nom}</h2>
@@ -229,6 +299,36 @@ export default function Settings() {
               Votre identifiant OpenAlex permet la synchronisation automatique de vos publications. 
               Trouvez-le sur <a href="https://openalex.org" target="_blank" rel="noopener noreferrer">openalex.org</a>
             </span>
+          </div>
+
+          <div className="settings-form-row">
+            <div className="settings-form-group">
+              <label className="settings-label">
+                <FiPhone size={14} style={{ marginRight: 6 }} />
+                Numéro de téléphone
+              </label>
+              <input
+                type="tel"
+                value={profileForm.phone_number}
+                onChange={(e) => setProfileForm(p => ({ ...p, phone_number: e.target.value }))}
+                placeholder="Ex: +213 555 123 456"
+                className="settings-input"
+                id="settings-phone"
+              />
+            </div>
+            <div className="settings-form-group">
+              <label className="settings-label">
+                <FiCalendar size={14} style={{ marginRight: 6 }} />
+                Date de naissance
+              </label>
+              <input
+                type="date"
+                value={profile?.date_of_birth || ''}
+                disabled
+                className="settings-input settings-input-disabled"
+              />
+              <span className="settings-hint">La date de naissance ne peut pas être modifiée après l'inscription</span>
+            </div>
           </div>
 
           <div className="settings-form-group">

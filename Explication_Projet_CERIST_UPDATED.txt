@@ -1,0 +1,708 @@
+======================================================================
+         COMPRENDRE LE PROJET CERIST BIBLIO-PLATFORM (V2)
+   (Explication simplifiée pour les non-informaticiens et les jurys)
+   
+   DOCUMENTATION COMPLÈTE ET ACTUALISÉE - Avril 2026
+======================================================================
+
+1. L'OBJECTIF DU PROJET (Pourquoi avons-nous créé cela ?)
+----------------------------------------------------------------------
+En Algérie, la recherche scientifique est très active, mais il est souvent difficile pour les décideurs de mesurer l'impact réel des laboratoires, des équipes et des chercheurs. 
+La "CERIST Biblio-Platform" est une plateforme web moderne et complète conçue pour résoudre ce problème. 
+
+Son but est de faire le pont entre :
+- Les données publiques de recherche (articles publiés, citations, H-index) via OpenAlex et PubMed
+- La structure hiérarchique réelle de l'Algérie (Tutelle → Institution → Laboratoire → Équipe → Chercheur)
+- Une gestion complète des utilisateurs avec 5 niveaux de rôles et permissions différentes
+
+Au lieu que chaque chercheur calcule son "H-index" (sa note de performance) dans son coin, cette plateforme calcule automatiquement et dynamiquement les scores de groupes entiers sans faire d'erreurs (sans compter deux fois le même article écrit par deux chercheurs de la même équipe).
+
+NOUVEAUTÉS CLÉS DE CETTE VERSION (V2) :
+✓ Intégration OpenAlex + PubMed pour la recherche de publications
+✓ 10 routers API avec 35+ endpoints
+✓ 13+ pages React complètes avec dashboards interactifs
+✓ Gestion complète des équipes et laboratoires avec hiérarchie explorable
+✓ Rapports institutionnels pour les directeurs
+✓ Système de notifications pour toutes les actions
+✓ Recherche avancée avec opérateurs booléens (AND/OR)
+✓ Synchronisation automatique des publications (harvester)
+✓ Multi-tenancy sécurisé avec isolation des données par rôle
+
+
+================================================================================
+
+2. ARCHITECTURE GLOBALE (Comment ça marche à l'intérieur ?)
+----------------------------------------------------------------------
+
+Imaginez un très grand restaurant universitaire. Notre projet est divisé de la même manière :
+
+A. LA FAÇADE / LA SALLE (Le "Frontend" - React.js + Vite)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+C'est ce que l'utilisateur voit sur son écran (les boutons, les graphiques, les tableaux, les formulaires). 
+- Logique : React est conçu de façon "réactive". Si une donnée change, le graphique se redessine tout seul
+- Technologies : React 19.2.0, React Router 7.13.1, Axios 1.13.6, Recharts 3.8.1, Vite 7.3.1
+- 13+ pages complètes : Login, Register, Dashboard, TeamManagement, LabManagement, etc.
+- 11 composants réutilisables : Header, Sidebar, ProtectedRoute, PublicationsChart, KPICard, etc.
+
+B. LA CUISINE (Le "Backend" - Python & FastAPI)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+C'est le cerveau caché. Quand vous cliquez sur "Voir les statistiques", la salle envoie le serveur en cuisine.
+- Framework : FastAPI 0.104.1 (ultra-rapide, async/await)
+- Serveur : Uvicorn 0.24.0 (serveur ASGI)
+- 10 routers avec 35+ endpoints pour toutes les opérations
+- 6 services backend pour la logique métier (search, openalex, pubmed, bibliometrix, isolation, harvester)
+
+C. LE GARDE-MANGER (La "Base de données" - PostgreSQL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+C'est où nous rangeons tout : les mots de passe cryptés, les noms des laboratoires, les articles, les utilisateurs, les rapports.
+- PostgreSQL avec SQLAlchemy ORM 2.0.23
+- 7 modèles de données : User, Institution, Laboratoire, Equipe, Publication, Rapport, Notification
+- Intégrité des données garantie par Foreign Keys et contraintes
+- Support Soft Delete pour l'historique
+
+D. LES SCIENTIFIQUES EXTERNES (Bibliometrix via R + APIs)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APIs externes :
+- OpenAlex (https://api.openalex.org) : Source majeure de données de recherche, recherche d'auteurs, métadonnées enrichies
+- PubMed (eutils.ncbi.nlm.nih.gov) : Données médicales, eSearch + eSummary
+
+Calculs bibliométriques :
+- Si Rscript 4.0+ disponible : utilise Bibliometrix via subprocess pour calculs avancés
+- Fallback Python : H-index, G-index, I10-index calculés directement si R indisponible
+- Agrégation groupe H-index pour les équipes avec déduplication automatique des publications
+
+
+================================================================================
+
+3. LA HIÉRARCHIE ET LES RÔLES (5 Niveaux Hiérarchiques)
+----------------------------------------------------------------------
+
+Le système est conçu avec un principe de "séparation stricte". Chacun ne voit que ce qu'il a le droit de voir (Multi-tenancy).
+
+Niveau 1 : CHERCHEUR
+└─ Rôle : Scientifique / Chercheur
+   - Voit ses données personnelles uniquement
+   - Publications et statistiques personnelles (H-index, citations)
+   - Peut mettre à jour son profil
+   - Routes accessibles : GET /api/users/{id}/publications, GET /api/users/{id}/stats
+   - Nombre : Illimité par institution
+
+Niveau 2 : CHEF_EQUIPE
+└─ Rôle : Gère une Équipe
+   - Peut ajouter/retirer des chercheurs de son équipe
+   - Vue centralisée des statistiques de son équipe
+   - Agrégation H-index groupe (publications fusionnées)
+   - Comparaison performance des membres
+   - Routes : GET /api/teams/{team_id}/statistics, GET /teams/{team_id}/members
+   - Supervision : ~5-15 chercheurs par équipe
+
+Niveau 3 : CHEF_LABO
+└─ Rôle : Gère un Laboratoire
+   - Crée les équipes et nomme les chefs d'équipe
+   - Comparaison performance globale entre équipes
+   - Vue macro du laboratoire avec drill-down possible
+   - Routes : GET /hierarchy/laboratories, POST /hierarchy/laboratories
+   - Supervision : ~2-5 équipes par labo
+
+Niveau 4 : DIRECTEUR
+└─ Rôle : Dirige une Institution (Université)
+   - Gère tous les laboratoires d'une institution
+   - Vue macro complète de l'institution
+   - Crée les rapports institutionnels
+   - SEUL niveau autorisé à créer des rapports (Rapport)
+   - Routes : GET /director/statistics, GET /rapports, POST /rapports
+   - Supervision : ~5-10 laboratoires par institution
+
+Niveau 5 : TUTELLE
+└─ Rôle : Gère au niveau national (Ministère)
+   - Vue globale nationale de toutes les institutions
+   - Droits suprêmes pour créer les institutions
+   - Ne voit que les institutions sous sa tutelle
+   - Routes : GET /api/institutions, POST /api/institutions
+   - Nombre : 1-5 par gouvernement
+
+Structure hiérarchique explorable :
+```
+TUTELLE (Ministère - Ex: DGRSDT)
+    │
+    ├─ DIRECTEUR
+    │   │
+    │   └─ Institution (Université 1)
+    │       │
+    │       ├─ CHEF_LABO
+    │       │   │
+    │       │   └─ Laboratoire 1
+    │       │       │
+    │       │       ├─ CHEF_EQUIPE
+    │       │       │   │
+    │       │       │   └─ Équipe 1
+    │       │       │       │
+    │       │       │       ├─ CHERCHEUR (Alice)
+    │       │       │       ├─ CHERCHEUR (Bob)
+    │       │       │       └─ CHERCHEUR (Charlie)
+    │       │       │
+    │       │       └─ Équipe 2
+    │       │
+    │       └─ CHEF_LABO (autre labo)
+    │
+    └─ DIRECTEUR (autre université)
+        └─ Institution (Université 2)
+            ...
+```
+
+
+================================================================================
+
+4. SÉCURITÉ AVANCÉE (Techniques Implémentées)
+----------------------------------------------------------------------
+
+✓ Soft Delete (Suppression Douce)
+  Quand un chef retire un chercheur de son équipe, il n'est pas effacé physiquement de la base.
+  On change juste "is_active = False" ou on enlève le lien "equipe_id".
+  Résultat : Historique des publications conservé à jamais.
+
+✓ Multi-tenancy Sécurisé
+  Tous les routers incluent des filtres automatiques par rôle.
+  Exemple : Si un directeur demande "les labos", le backend ajoute automatiquement :
+  WHERE institution_id = {current_user.institution_id}  ← FILTRE IMPLICITE
+  Impossible de voir les données d'une autre institution.
+
+✓ JWT Authentication (24 heures expiry)
+  - Format : HS256 (HMAC with SHA256)
+  - Token contient : user_id + expiration
+  - Stocké dans localStorage du navigateur
+  - Chaque requête inclut : Authorization: Bearer {JWT_TOKEN}
+  - Signature empêche l'altération du token
+
+✓ Cryptage des Mots de Passe (Bcrypt - 12 rounds)
+  - Les mots de passe ne sont JAMAIS stockés en clair
+  - Même si quelqu'un vole la base, les mots de passe sont inintelligibles
+  - bcrypt.verify() compare sans jamais montrer le vrai mot de passe
+  - 12 rounds = extrêmement long à "casser" par force brute
+
+✓ Graphiques Avancés (Recharts)
+  - Bar charts, Line charts, Scatter plots
+  - Visualisations interactives avec drill-down
+  - Classification des mots-clés (Moteurs, Niche, Émergents, Base)
+
+✓ Cascading Hierarchy (Sélections en cascade)
+  - Créer un compte : Choisir Institution → Déverrouille labos → Déverrouille équipes
+  - Tout filtré en temps réel depuis le service d'isolation
+
+
+================================================================================
+
+PARTIE 2 : STRUCTURE TECHNIQUE DU PROJET (DÉTAIL ACTUALISÉ)
+================================================================================
+
+5. BACKEND (Python 3.x + FastAPI + PostgreSQL)
+----------------------------------------------------------------------
+
+STACK TECHNIQUE :
+✓ Framework : FastAPI 0.104.1
+✓ Serveur : Uvicorn 0.24.0
+✓ ORM : SQLAlchemy 2.0.23
+✓ BD : PostgreSQL (driver psycopg2-binary 2.9.9)
+✓ Validation : Pydantic 2.5.0
+✓ Authentification : PyJWT 2.12.1 + Bcrypt 4.1.1
+✓ HTTP Client : Httpx 0.25.2 (async requests)
+
+5.1 LES 7 MODÈLES DE DONNÉES (models.py)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+① USER (Hub Central)
+   - id (PK), nom, prenom, email (unique), password_hash
+   - role ∈ {TUTELLE, DIRECTEUR, CHEF_LABO, CHEF_EQUIPE, CHERCHEUR}
+   - institution_id (FK), labo_id (FK), equipe_id (FK)
+   - openalex_id (liaison externe), is_active (soft delete)
+   - Relations : institution, laboratoire, equipe, publications, rapports, notifications
+
+② INSTITUTION
+   - id (PK), nom, code, ville
+   - tutelle_id (FK → User TUTELLE)
+   - Contient : laboratoires, rapports, utilisateurs
+
+③ LABORATOIRE
+   - id (PK), nom, code
+   - institution_id (FK → Institution)
+   - Contient : équipes
+
+④ EQUIPE
+   - id (PK), nom, code
+   - labo_id (FK → Laboratoire)
+   - chef_equipe_id (FK → User avec rôle CHEF_EQUIPE)
+   - Contient : utilisateurs (chercheurs)
+
+⑤ PUBLICATION
+   - id (PK), titre, auteurs, année, citées_par_count
+   - user_id (FK → User)
+   - author_id_openalex (liaison externe OpenAlex)
+   - Source : OpenAlex ou PubMed
+
+⑥ RAPPORT
+   - id (PK), titre, contenu, date_création
+   - institution_id (FK → Institution)
+   - created_by (FK → User DIRECTEUR)
+
+⑦ NOTIFICATION
+   - id (PK), message, titre
+   - user_id (FK → User)
+   - is_read (Default: False)
+
+
+5.2 LES 10 ROUTERS API (35+ ENDPOINTS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+① routers/auth.py - AUTHENTIFICATION
+   POST   /auth/register              Créer nouveau compte
+   POST   /auth/login                 Connexion → JWT
+   GET    /auth/profile/me            Profil utilisateur actuel
+   GET    /auth/logout                Déconnexion
+
+② routers/users.py - GESTION UTILISATEURS
+   GET    /api/users/                 Liste utilisateurs (filtré)
+   GET    /api/users/{id}             Détails utilisateur
+   GET    /api/users/{id}/publications Publications chercheur
+   GET    /api/users/{id}/stats       Stats (H-index, citations)
+   PUT    /api/users/{id}             Modifier utilisateur
+   DELETE /api/users/{id}             Supprimer utilisateur
+
+③ routers/search.py - RECHERCHE AVANCÉE
+   GET    /api/researcher/{name}      Chercher chercheur
+   POST   /researcher/search/advanced Recherche opérateurs (AND/OR)
+   GET    /search/openalex/{query}    Requête OpenAlex brute
+   GET    /search/pubmed/{query}      Requête PubMed brute
+
+④ routers/hierarchy.py - NAVIGATION HIÉRARCHIE
+   GET    /hierarchy/institutions     Institutions (filtré rôle)
+   GET    /hierarchy/directors        Directeurs institution
+   GET    /hierarchy/laboratories     Laboratoires
+   GET    /hierarchy/teams            Équipes
+   GET    /hierarchy/path/{user_id}   Chemin complet (Tutelle → ... → Chercheur)
+
+⑤ routers/institutions.py - GESTION INSTITUTIONS
+   GET    /api/institutions/          Liste institutions
+   POST   /api/institutions/          Créer (TUTELLE seulement)
+   GET    /api/institutions/{id}      Détails
+   PUT    /api/institutions/{id}      Modifier
+   DELETE /api/institutions/{id}      Supprimer
+
+⑥ routers/teams.py - GESTION ÉQUIPES
+   GET    /api/teams/{team_id}/statistics    Stats équipe
+   GET    /api/teams/{team_id}/bibliometrics H-index agrégé
+   GET    /api/teams/{team_id}/members       Membres équipe
+   POST   /api/teams/                        Créer équipe
+   PUT    /api/teams/{id}                    Modifier
+   DELETE /api/teams/{id}                    Supprimer
+
+⑦ routers/rapports.py - GESTION RAPPORTS
+   GET    /rapports/                   Tous rapports (filtré)
+   GET    /rapports/{id}               Détail rapport
+   POST   /rapports/                   Créer (DIRECTEUR seulement)
+   PUT    /rapports/{id}               Modifier
+   DELETE /rapports/{id}               Supprimer
+
+⑧ routers/registration.py - ENREGISTREMENT & RÔLES
+   POST   /registration/{role}        Créer compte avec rôle
+   GET    /institutions/{id}/users     Utilisateurs institution
+   POST   /hierarchy/laboratories      Créer laboratoire
+   POST   /hierarchy/teams             Créer équipe
+
+⑨ routers/harvester.py - COLLECTE DONNÉES
+   GET    /harvester/sync/{user_id}    Synchro publications OpenAlex
+   POST   /harvester/batch             Batch sync multiple users
+   GET    /harvester/status            État synchronisation
+
+⑩ routers/hierarchy_management.py - GESTION HIÉRARCHIE AVANCÉE
+   GET    /team/{team_id}/members      Membres équipe
+   PUT    /team/{team_id}/add_member/{user_id}    Ajouter membre
+   DELETE /team/{team_id}/remove_member/{user_id} Retirer membre
+   POST   /hierarchy/validate_structure            Valider structure
+
+
+5.3 LES 6 SERVICES (services/)
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+① search_service.py
+   • Intégration OpenAlex + PubMed
+   • Opérateurs booléens (AND, OR, NOT)
+   • Filtrage année, type publication
+   • Déduplication et fusion résultats
+
+② openalex_service.py
+   • Recherche auteurs par nom
+   • Récupération publications
+   • Citations + H-index
+   • Métadonnées enrichies
+
+③ pubmed_service.py
+   • eSearch : Recherche articles
+   • eSummary : Détails articles
+   • Filtrage date, journal
+
+④ bibliometrix.py
+   • H-index : Articles avec ≥H citations
+   • G-index : Indice plus compréhensif
+   • I10-index : Articles avec ≥10 citations
+   • Agrégation groupe H-index
+   • Subprocess Rscript (avec fallback Python)
+
+⑤ isolation_service.py
+   • Filtres rôle-based automatiques
+   • TUTELLE → Voir seulement ses institutions
+   • DIRECTEUR → Voir seulement son institution
+   • CHEF_LABO → Voir seulement son labo
+   • CHEF_EQUIPE → Voir seulement son équipe
+   • CHERCHEUR → Voir seulement ses données
+
+⑥ harvester_service.py
+   • Synchronise publications OpenAlex
+   • Mise à jour batch statistiques
+   • Gestion erreurs API
+   • Log opérations
+
+
+================================================================================
+
+6. FRONTEND (React 19.2.0 + Vite 7.3.1)
+----------------------------------------------------------------------
+
+STACK TECHNIQUE :
+✓ Framework : React 19.2.0
+✓ Router : React Router 7.13.1
+✓ HTTP Client : Axios 1.13.6 (JWT interceptors)
+✓ Graphiques : Recharts 3.8.1
+✓ Build Tool : Vite 7.3.1
+
+6.1 LES 13+ PAGES
+━━━━━━━━━━━━━━━
+
+① Login.jsx - Connexion utilisateur
+② Register.jsx - Enregistrement (rôle + institution)
+③ DashboardProfil.jsx - Dashboard personnel (KPIs, publications)
+④ GlobalStatistics.jsx - Statistiques globales (institution/équipe)
+⑤ TeamManagement.jsx - Gestion équipe (ajouter/retirer membres)
+⑥ LabManagement.jsx - Gestion laboratoire
+⑦ UserManagement.jsx - Administration utilisateurs
+⑧ InstitutionalStructure.jsx - Structure hiérarchique explorable
+⑨ OpenAlex.jsx - Recherche OpenAlex
+⑩ MyPublications.jsx - Publications de l'utilisateur
+⑪ Rapports.jsx - Visualisation rapports (DIRECTEUR seulement)
+⑫ Settings.jsx - Paramètres compte
+⑬ Results.jsx - Résultats recherche
++ Pages debug : HierarchyDebug, HierarchySimple, HelloWorld, etc.
+
+
+6.2 LES 11 COMPOSANTS RÉUTILISABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+① Header.jsx - Barre supérieure (logo, menu)
+② Sidebar.jsx - Navigation latérale (menu par rôle)
+③ ProtectedRoute.jsx - Protéger pages (authentication + rôle)
+④ PublicationsChart.jsx - Graphique barres (publications/année)
+⑤ PublicationsTable.jsx - Tableau publications
+⑥ ResearcherCard.jsx - Carte chercheur (hover details)
+⑦ ResearcherProfileCard.jsx - Profil complet chercheur
+⑧ KPICard.jsx - Carte KPI (H-index, citations, etc)
+⑨ StatsPanel.jsx - Panneau statistiques
+⑩ AdvancedSearchBuilder.jsx - Constructeur recherche avancée
+⑪ HierarchicalExplorer.jsx - Explorateur hiérarchie
+
+6.3 CONTEXTE GLOBAL (context/)
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+SearchContext.jsx
+- État global de recherche
+- searchQuery, searchResults, isLoading
+- performSearch async function
+- Accessible depuis n'importe où avec useSearch()
+
+
+6.4 SERVICE API (services/api.js)
+━━━━━━━━━━━━━━━━━
+
+Axios client avec :
+- Base URL : http://localhost:8000
+- JWT interceptor automatique
+- 30+ fonctions exportées pour toutes les opérations
+- Gestion erreurs centralisée
+
+
+6.5 STRUCTURE ASSETS
+━━━━━━━━━━━━━━
+
+auth.css - Styling authentification
+dashboard.css - Styling dashboard
+hierarchical-explorer.css - Styling explorateur
+researcher-card.css - Styling cartes
+stats-panel.css - Styling statistiques
+style.css - Styles globaux
+
+
+================================================================================
+
+7. FLUX COMPLET D'EXÉCUTION (Exemple Concret)
+----------------------------------------------------------------------
+
+Scénario : Un CHEF_EQUIPE veut voir les statistiques H-Index de son équipe
+
+ÉTAPE 1 : React - Clic utilisateur
+  └─ Utilisateur clique "Statistiques de mon équipe"
+
+ÉTAPE 2 : React - Vérifier authentification
+  └─ ProtectedRoute vérifie isAuthenticated + user.role
+  └─ Si non autorisé → Redirection /login
+
+ÉTAPE 3 : React - Faire requête API
+  └─ axios.get("/team/42/statistics", {
+       headers: { Authorization: "Bearer JWT..." }
+     })
+
+ÉTAPE 4 : FastAPI Middleware
+  └─ CORS validation (origin OK?)
+  └─ Route matching (/team/{team_id}/statistics)
+
+ÉTAPE 5 : FastAPI - Décoder JWT
+  └─ current_user = get_current_user() → Extraction user_id du token
+  └─ Vérifier : user_id existe en BD?
+
+ÉTAPE 6 : FastAPI - Vérifier autorisation
+  └─ Vérifier : current_user.role == "chef_equipe"?
+  └─ Vérifier : current_user.equipe_id == team_id?
+  └─ Si refusé → HTTPException(403)
+
+ÉTAPE 7 : FastAPI - Requête BD
+  └─ SELECT * FROM equipes WHERE id = 42
+  └─ SELECT * FROM users WHERE equipe_id = 42 AND is_active = True
+  └─ SELECT * FROM publications WHERE user_id IN (...)
+
+ÉTAPE 8 : FastAPI - Service bibliometrix
+  └─ bibliometrix.calculate_group_h_index(publications_list)
+  └─ Possibilité subprocess Rscript ou fallback Python
+  └─ Retourner : h_index, g_index, i10_index, citations totales
+
+ÉTAPE 9 : FastAPI - Formater réponse
+  └─ return {
+       "h_index": 8,
+       "g_index": 12,
+       "i10_index": 6,
+       "total_publications": 25,
+       "members": [ { "name": "Alice", ... }, ... ]
+     }
+
+ÉTAPE 10 : React - Recevoir + Afficher
+  └─ setStats(response.data)
+  └─ Page se redessine automatiquement (React)
+  └─ Afficher : H-index = 8, graphique, tableau membres
+
+
+================================================================================
+
+8. FICHIERS DE CONFIGURATION
+----------------------------------------------------------------------
+
+.env (Ne DOIT PAS être commité)
+DATABASE_URL=postgresql://user:password@localhost:5432/ceristbiblio
+SECRET_KEY=your-secret-key-here-very-long-random-string
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=24
+OPENALEX_API_URL=https://api.openalex.org
+
+Backend/requirements.txt
+fastapi==0.104.1
+uvicorn==0.24.0
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+pydantic[email]==2.5.0
+PyJWT==2.12.1
+bcrypt==4.1.1
+python-dotenv==1.0.0
+httpx==0.25.2
+
+ceristbiblio_platform/package.json
+{
+  "name": "ceristbiblio_platform",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.1",
+    "axios": "^1.13.6",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1",
+    "@vitejs/plugin-react": "^4.3.0"
+  }
+}
+
+
+================================================================================
+
+9. COMMANDES POUR DÉVELOPPEMENT
+----------------------------------------------------------------------
+
+BACKEND :
+$ pip install -r Backend/requirements.txt
+$ python Backend/main.py  # Démarrage serveur (port 8000)
+
+FRONTEND :
+$ cd ceristbiblio_platform
+$ npm install
+$ npm run dev  # Démarrage dev server (port 5173)
+$ npm run build # Production build
+
+
+================================================================================
+
+10. RÉSUMÉ DES TECHNOLOGIES UTILISÉES
+----------------------------------------------------------------------
+
+BACKEND (Server-Side)
+├─ Langage : Python 3.x
+├─ Framework Web : FastAPI 0.104.1
+├─ Serveur ASGI : Uvicorn 0.24.0
+├─ ORM & Migration : SQLAlchemy 2.0.23
+├─ Base de Données : PostgreSQL (psycopg2 2.9.9)
+├─ Validation : Pydantic 2.5.0
+├─ Authentification : PyJWT 2.12.1, Bcrypt 4.1.1
+├─ HTTP Client : Httpx 0.25.2
+└─ Env Vars : python-dotenv 1.0.0
+
+FRONTEND (Client-Side)
+├─ Langage : JavaScript (ES6+)
+├─ Framework UI : React 19.2.0
+├─ Routeur : React Router 7.13.1
+├─ Build Tool : Vite 7.3.1
+├─ HTTP Client : Axios 1.13.6
+└─ Graphiques : Recharts 3.8.1
+
+TESTS & QUALITÉ
+├─ Linter : ESLint (config: eslint.config.js)
+└─ Tests : À mettre en place
+
+DÉPLOIEMENT
+├─ Backend : Peut être déployé sur Heroku, PythonAnywhere, AWS, etc.
+├─ Frontend : Peut être déployé sur Vercel, Netlify, GitHub Pages, etc.
+└─ BD : PostgreSQL sur serveur dédié (ex: AWS RDS, Heroku Postgres)
+
+
+================================================================================
+
+11. STRUCTURE DU PROJET (Arborescence)
+----------------------------------------------------------------------
+
+CERISTBiblio-Platform/
+├─ Backend/
+│  ├─ main.py                          # Entrée FastAPI
+│  ├─ database.py                      # Config PostgreSQL
+│  ├─ models.py                        # 7 modèles SQLAlchemy
+│  ├─ schemas.py                       # Pydantic validation
+│  ├─ requirements.txt                 # Dépendances Python
+│  ├─ routers/                         # 10 routers API
+│  │  ├─ auth.py
+│  │  ├─ users.py
+│  │  ├─ search.py
+│  │  ├─ hierarchy.py
+│  │  ├─ institutions.py
+│  │  ├─ teams.py
+│  │  ├─ rapports.py
+│  │  ├─ registration.py
+│  │  ├─ harvester.py
+│  │  ├─ hierarchy_management.py
+│  │  └─ __init__.py
+│  └─ services/
+│     ├─ search_service.py
+│     ├─ openalex_service.py
+│     ├─ pubmed_service.py
+│     ├─ bibliometrix.py
+│     ├─ isolation_service.py
+│     ├─ harvester_service.py
+│     └─ __init__.py
+│
+├─ ceristbiblio_platform/              # Frontend React
+│  ├─ index.html
+│  ├─ package.json
+│  ├─ vite.config.js
+│  ├─ eslint.config.js
+│  ├─ src/
+│  │  ├─ main.jsx
+│  │  ├─ App.jsx                       # Routeur principal
+│  │  ├─ pages/                        # 13+ pages
+│  │  │  ├─ Login.jsx
+│  │  │  ├─ Register.jsx
+│  │  │  ├─ DashboardProfil.jsx
+│  │  │  ├─ GlobalStatistics.jsx
+│  │  │  ├─ TeamManagement.jsx
+│  │  │  ├─ LabManagement.jsx
+│  │  │  ├─ UserManagement.jsx
+│  │  │  ├─ InstitutionalStructure.jsx
+│  │  │  ├─ OpenAlex.jsx
+│  │  │  ├─ MyPublications.jsx
+│  │  │  ├─ Rapports.jsx
+│  │  │  ├─ Settings.jsx
+│  │  │  └─ Results.jsx
+│  │  ├─ components/                   # 11 composants
+│  │  │  ├─ Header.jsx
+│  │  │  ├─ Sidebar.jsx
+│  │  │  ├─ ProtectedRoute.jsx
+│  │  │  ├─ PublicationsChart.jsx
+│  │  │  ├─ PublicationsTable.jsx
+│  │  │  ├─ ResearcherCard.jsx
+│  │  │  ├─ KPICard.jsx
+│  │  │  └─ ... (autres)
+│  │  ├─ context/
+│  │  │  ├─ SearchContext.jsx
+│  │  │  └─ useSearch.js
+│  │  ├─ services/
+│  │  │  └─ api.js                    # Axios client 30+ functions
+│  │  └─ assets/                       # CSS styling
+│  │     ├─ auth.css
+│  │     ├─ dashboard.css
+│  │     └─ style.css
+│  └─ public/                          # Assets statiques
+│     ├─ logo.png
+│     └─ favicon.ico
+│
+├─ img/                                # Images du projet
+├─ .env                                # Variables d'environnement (IGNORED)
+├─ .gitignore
+├─ package-lock.json
+├─ ACCOUNTS.txt
+├─ ARCHITECTURE_RBAC.md
+└─ README.md
+
+
+================================================================================
+
+EN CONCLUSION
+
+La CERIST Biblio-Platform V2 est un système complet de management académique et d'analyse bibliométrique qui :
+
+✓ Integre deux sources majeures de données de recherche (OpenAlex + PubMed)
+✓ Supporte une hiérarchie complexe à 5 niveaux avec isolation des données
+✓ Fournit des calculs bibliométriques avancés (H, G, I10 indices)
+✓ Offre un interface React moderne avec 13+ pages + 11 composants
+✓ Expose 35+ endpoints API via FastAPI ultra-rapide
+✓ Garantit la sécurité avec JWT + Bcrypt + RBAC + Multi-tenancy
+✓ Persiste les données dans PostgreSQL avec intégrité relationnelle
+✓ Supporte la synchronisation automatique des publications
+✓ Génère des rapports institutionnels
+✓ Fournit des notifications pour toutes les actions
+
+PROCHAINES ÉTAPES POSSIBLES :
+- Ajouter des tests unitaires et d'intégration
+- Déployer sur serveur de production
+- Configurer SSL/HTTPS
+- Mettre en place un système de cache (Redis)
+- Ajouter plus d'APIs de recherche scientifique
+- Implémentation d'analytics avancée
+- Application mobile React Native
+
+========== FIN DE LA DOCUMENTATION ==========

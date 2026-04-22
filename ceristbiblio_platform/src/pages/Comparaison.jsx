@@ -78,12 +78,14 @@ function Comparaison() {
                       name: inst.nom || inst.name,
                       publications: statsRes.data.total_publications || 0,
                       citations: statsRes.data.total_citations || 0,
-                      h_index: statsRes.data.avg_h_index || 0
+                      h_index: statsRes.data.avg_h_index || statsRes.data.h_index || 0,
+                      g_index: statsRes.data.g_index || 0,
+                      i10_index: statsRes.data.i10_index || 0
                     };
                 }
-                return { name: inst.nom, publications: 0, citations: 0, h_index: 0 };
+                return { name: inst.nom || inst.name, publications: 0, citations: 0, h_index: 0, g_index: 0, i10_index: 0 };
              } catch(e) {
-                return { name: inst.nom, publications: 0, citations: 0, h_index: 0 };
+                return { name: inst.nom || inst.name, publications: 0, citations: 0, h_index: 0, g_index: 0, i10_index: 0 };
              }
         });
         comparedData = await Promise.all(statsPromises);

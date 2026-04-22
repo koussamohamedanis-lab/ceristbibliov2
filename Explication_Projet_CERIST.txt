@@ -1,80 +1,237 @@
 ======================================================================
-         COMPRENDRE LE PROJET CERIST BIBLIO-PLATFORM 
+         COMPRENDRE LE PROJET CERIST BIBLIO-PLATFORM (V2)
    (Explication simplifiée pour les non-informaticiens et les jurys)
+   
+   MISE À JOUR COMPLÈTE - Analyse Technique Actualisée du Projet
 ======================================================================
 
 1. L'OBJECTIF DU PROJET (Pourquoi avons-nous créé cela ?)
 ----------------------------------------------------------------------
 En Algérie, la recherche scientifique est très active, mais il est souvent difficile pour les décideurs de mesurer l'impact réel des laboratoires, des équipes et des chercheurs. 
-La "CERIST Biblio-Platform" est une plateforme web moderne conçue pour résoudre ce problème. 
+La "CERIST Biblio-Platform" est une plateforme web moderne et complète conçue pour résoudre ce problème. 
 
 Son but est de faire le pont entre :
-- Les données publiques de recherche (articles publiés, citations, H-index).
+- Les données publiques de recherche (articles publiés, citations, H-index) via OpenAlex et PubMed.
 - La structure hiérarchique réelle de l'Algérie (Tutelle -> Institution -> Laboratoire -> Équipe -> Chercheur).
+- Une gestion complète des utilisateurs avec 5 niveaux de rôles et permissions différentes.
 
-Au lieu que chaque chercheur calcule son "H-index" (sa note de performance) dans son coin, cette plateforme calcule automatiquement et dynamiquement les scores de groupes entiers sans faire d'erreurs (sans compter deux fois le même article écrit par deux chercheurs de la même équipe).
+Au lieu que chaque chercheur calcule son "H-index" (sa note de performance) dans son coin, cette plateforme calcule automatiquement et dynamiquement les scores de groupes entiers sans faire d'erreurs (sans compter deux fois le même article écrit par deux chercheurs de la même équipe). 
+
+NOUVEAUTÉS CLÉS DE CETTE VERSION :
+✓ Intégration OpenAlex + PubMed pour la recherche de publications
+✓ 10 routers API avec 35+ endpoints
+✓ 13+ pages React complètes avec dashboards
+✓ Gestion complète des équipes et laboratoires
+✓ Rapports institutionnels
+✓ Système de notifications
+✓ Recherche avancée avec opérateurs (AND/OR)
 
 
 2. COMMENT ÇA MARCHE À L'INTÉRIEUR ? (L'Architecture Globale)
 ----------------------------------------------------------------------
-Imaginez un très grand restaurant. Notre projet est divisé de la même manière :
+Imaginez un très grand restaurant universitaire. Notre projet est divisé de la même manière :
 
-A. LA FAÇADE / LA SALLE (Le "Frontend" - React.js)
-C'est ce que l'utilisateur voit sur son écran (les boutons, les graphiques, les formulaires). 
--> Logique utilisée : C'est conçu de façon "réactive". Si une donnée change, le graphique se redessine tout seul sans avoir besoin de rafraîchir la page Web.
+A. LA FAÇADE / LA SALLE (Le "Frontend" - React.js + Vite)
+C'est ce que l'utilisateur voit sur son écran (les boutons, les graphiques, les tableaux, les formulaires). 
+-> Logique utilisée : React est conçu de façon "réactive". Si une donnée change dans OpenAlex, le graphique se redessine tout seul sans avoir besoin de rafraîchir la page Web.
+-> Technologies : React 19.2.0, React Router, Axios, Recharts, Vite 7.3.1
 
 B. LA CUISINE (Le "Backend" - Python & FastAPI)
-C'est le cerveau caché. Quand vous cliquez sur "Voir les statistiques", la salle envoie le serveur en cuisine. La cuisine récupère les ingrédients, prépare le plat (fait les calculs), et le renvoie.
--> Pourquoi FastAPI ? Parce que c'est l'un des moteurs les plus rapides au monde, capable de traiter des milliers d'articles scientifiques en quelques microsecondes.
+C'est le cerveau caché. Quand vous cliquez sur "Voir les statistiques", la salle envoie le serveur en cuisine. 
+La cuisine récupère les ingrédients (données de PostgreSQL et des APIs externes), traite les données (fait les calculs de bibliométrie), et renvoie les résultats.
+-> Pourquoi FastAPI ? L'un des moteurs les plus rapides au monde (capable de traiter des milliers d'articles en microsecondes).
+-> 10 routers (auth, users, search, hierarchy, teams, institutions, rapports, registration, harvester, hierarchy_management)
+-> 35+ endpoints API pour toutes les opérations
 
 C. LE GARDE-MANGER (La "Base de données" - PostgreSQL)
-C'est là où nous rangeons tout : les mots de passe cryptés, les noms des laboratoires, et les articles.
--> Logique utilisée : On utilise des relations solides. Impossible de créer une "Équipe" si elle n'appartient pas à un "Laboratoire". Cela s'appelle l'intégrité des données.
+C'est là où nous rangeons tout : les mots de passe cryptés, les noms des laboratoires, les articles, les utilisateurs, les rapports.
+-> Base de données relationnelle solide.
+-> 7 modèles de données principaux : User, Institution, Laboratoire, Equipe, Publication, Rapport, Notification
+-> Intégrité des données garantie par les Foreign Keys
 
-D. LE SCIENTIFIQUE EXTERNE (Bibliometrix + Langage R)
-C'est notre robot spécial. Pour les calculs mathématiques très compliqués (ex: Les cartes thématiques des mots-clés ou l'impact collaboratif), le Python passe le relais à un programme spécialisé en données (le langage "R"). Une fois fini, "R" redonne le résultat à "Python", qui le renvoie à votre écran.
+D. LE SCIENTIFIQUE EXTERNE (Bibliometrix via R + APIs externes)
+APIs externes :
+- OpenAlex (https://api.openalex.org) : Source majeure de données de recherche, recherche d'auteurs
+- PubMed (eutils.ncbi.nlm.nih.gov) : Données médicales, recherche eSearch + eSummary
+
+Calculs bibliométriques :
+- Si Rscript est disponible : utilise Bibliometrix via subprocess pour calculs avancés
+- Fallback Python : H-index, G-index, I10-index calculés directement
+- Agrégation de groupe H-index pour les équipes avec déduplication automatique
 
 
 3. LA HIÉRARCHIE ET LES RÔLES DE LA PLATEFORME
 ----------------------------------------------------------------------
-Le système est conçu avec un principe de "séparation stricte". Chacun ne voit que ce qu'il a le droit de voir (Multi-tenancy).
+Le système est conçu avec un principe de "séparation stricte". Chacun ne voit que ce qu'il a le droit de voir (Multi-tenancy sécurisé).
 
-Niveau 1 : Le Chercheur
--> Il connecte son compte à "OpenAlex" (la grande base de données mondiale de la recherche).
--> Il voit son H-index personnel, ses citations, et peut mettre à jour son profil protégé par un mot de passe obligatoire.
+Niveau 1 : Le Chercheur (CHERCHEUR)
+-> Il se connecte à la plateforme avec ses identifiants
+-> Il connecte son profil à "OpenAlex" (la grande base de données mondiale de la recherche)
+-> Il voit son H-index personnel, ses citations, ses publications
+-> Il peut mettre à jour son profil protégé par un mot de passe crypté (bcrypt)
+-> Il peut voir ses publications et ses statistiques personnelles
+-> Routes accessibles : GET /api/users/{id}/publications, GET /api/users/{id}/stats
 
-Niveau 2 : Le Chef d'Équipe
--> Il peut "recruter" (ajouter) des chercheurs de la base vers son équipe.
--> La plateforme fusionne les publications de toute son équipe pour calculer le vrai "H-Index de groupe" (Bibliometrie avancée).
--> Il a un "Radar" qui compare la performance de ses membres.
+Niveau 2 : Le Chef d'Équipe (CHEF_EQUIPE)
+-> Il peut "recruter" (ajouter) des chercheurs existants vers son équipe
+-> La plateforme fusionne automatiquement les publications de toute son équipe
+-> Calcule le vrai "H-Index de groupe" via agrégation intelligente (Bibliometrie avancée)
+-> Peut voir les statistiques comparatives de ses membres
+-> Gère les membres de son équipe
+-> Routes accessibles : GET /api/teams/{team_id}/statistics, GET /teams/{team_id}/members
 
-Niveau 3 : Le Chef de Laboratoire
--> Il crée les équipes et nomme les Chefs d'Équipe.
--> Il peut comparer la performance globale de ses différentes équipes.
+Niveau 3 : Le Chef de Laboratoire (CHEF_LABO)
+-> Il crée les équipes et nomme les Chefs d'Équipe
+-> Il peut comparer la performance globale de ses différentes équipes
+-> Vue macro du laboratoire entier avec drill-down sur chaque équipe
+-> Gère les rapports du laboratoire
+-> Routes accessibles : GET /hierarchy/laboratories, POST /hierarchy/laboratories
 
-Niveau 4 : Le Directeur d'Institution (ex: Le Recteur de l'Université)
--> Il gère tous les laboratoires.
--> Il a une vue "Macro" de l'université, mais peut "creuser" (Drill-down) pour voir un labo, puis une équipe, puis un chercheur spécifique.
+Niveau 4 : Le Directeur d'Institution (DIRECTEUR)
+-> Il gère tous les laboratoires d'une institution
+-> Il a une vue "Macro" complète de l'institution
+-> Il peut comparer les laboratoires et explorer jusqu'au niveau chercheur
+-> Il crée les rapports institutionnels (Rapport)
+-> Seul niveau pouvant créer les rapports / visualiser les statistiques globales
+-> Routes accessibles : GET /director/statistics, GET /rapports, POST /rapports
 
-Niveau 5 : La Tutelle (ex: Le Ministère - DGRSDT, MESRS)
--> Vue globale nationale. Ce rôle a les droits suprêmes pour créer les universités/institutions, mais ne voit que les institutions sous sa propre tutelle.
+Niveau 5 : La Tutelle (TUTELLE)
+-> Vue globale nationale
+-> Droits suprêmes pour créer les institutions (universités)
+-> Ne voit que les institutions sous sa propre tutelle
+-> Peut gérer les directeurs
+-> Routes accessibles : GET /api/institutions, POST /api/institutions
+
+Structure hiérarchique explorable :
+```
+TUTELLE (Ministère - Ex: DGRSDT)
+    └── DIRECTEUR
+        └── Institution (Université)
+            └── CHEF_LABO
+                └── Laboratoire
+                    └── CHEF_EQUIPE
+                        └── Équipe
+                            └── CHERCHEUR
+                                └── Chercheur (Scientifique)
+```
 
 
-4. LA SYNTAXE ET LES DÉCISIONS INTELLIGENTES DU CODE (Soft Delete & Sécurité)
+4. TECHNOLOGIE ET SÉCURITÉ AVANCÉE
 ----------------------------------------------------------------------
-Pour garantir un produit professionnel, des techniques avancées ont été codées :
+Pour garantir un produit professionnel de qualité, des techniques avancées ont été implémentées :
 
-- "Soft Delete" (Suppression douce) : Dans le code, si un Chef retire un membre de son équipe, le chercheur n'est *pas physiquement effacé* de la base de données. On change juste une petite variable "is_active" à "Faux", ou on enlève son étiquette d'équipe. Ainsi, l'université ne perd jamais l'historique des publications d'un chercheur.
+- "Soft Delete" (Suppression douce) : Quand un Chef retire un member de son équipe, le chercheur n'est pas effacé physiquement de la base. 
+  On change juste une variable "is_active" à "Faux", ou on enlève son lien d'équipe. Ainsi, l'université ne perd jamais l'historique.
 
-- "Multi-tenancy sécurisé" : À chaque fois qu'une requête part en base de données, la logique SQL ajoute toujours un cadenas automatique : "Si ce directeur demande la liste des labos, montre M-O-I uniquement les labos OÙ institution_id = SON institution". Impossible de pirater ou de "voir" les labos du voisin.
+- "Multi-tenancy sécurisé" : Tous les routers incluent des filtres automatiques par rôle. 
+  Exemple : Si un directeur demande "les labos", le backend ajoute automatiquement : 
+  WHERE institution_id = current_user.institution_id <- FILTRE IMPLICITE
+  Impossible de voir les données d'une autre institution.
 
-- Graphiques Innovants (Recharts) : La bibliothèque de dessin ne fait pas que des camemberts. Elle fait des Nuages de dispersion (Scatter Charts) pour classer les mots-clés selon s'ils sont "Moteurs, De niche, Émergents ou De base".
+- "JWT Authentication" (24 heures expiry) : Token HS256 + localStorage
+  - Chaque requête inclut : Authorization: Bearer {JWT_TOKEN}
+  - Token contient user_id + expiration
+  - Signature empêche l'altération
 
-- "Cascading Selects" : Lors de la création d'un compte, la logique est en cascade. On choisit l'Institution, ce qui débloque uniquement SES laboratoires, ce qui débloque ensuite uniquement SES équipes. Tout est filtré en temps réel depuis la "Cuisine".
+- "Cryptage des mots de passe" (Bcrypt - 12 rounds) :
+  - Les mots de passe ne sont JAMAIS stockés en clair
+  - Même si quelqu'un vole la base, les mots de passe sont inintelligibles
+  - bcrypt.verify() compare sans jamais montrer le vrai mot de passe
+
+- "Graphiques Avancés" (Recharts) : 
+  - Bar charts, Line charts, Scatter plots (pour la classification des mots-clés)
+  - Visualisations interactives avec drill-down
+
+- "Cascading Hierarchy" : 
+  - Créer un compte : Choisir Institution → Dés-locker ses labos → Dés-locker ses équipes
+  - Tout est filtré en temps réel depuis le backend au travers du service d'isolation
 
 ----------------------------------------------------------------------
 EN CONCLUSION :
-La CERIST Biblio-Platform n'est pas juste un tableau d'affichage ; c'est un outil d'aide à la décision complexe capable d'isoler des données de manière hermétique, tout en fusionnant des bases de connaissances mondiales (OpenAlex) avec une analyse statistique poussée (Bibliometrix via R).
+La CERIST Biblio-Platform est un outil d'aide à la décision stratégique complet capable de :
+✓ Isoler les données de manière hermétique par rôle et institution
+✓ Fusionner les API de recherche mondiales (OpenAlex + PubMed) avec l'analyse statistique
+✓ Calculer des métriques bibliométriques avancées (H-index, G-index, I10-index)
+✓ Fournir des tableaux de bord intuitifs pour chaque niveau hiérarchique
+✓ Générer des rapports institutionnels
+✓ Garantir la sécurité maximale avec JWT + Bcrypt + RBAC
+
+<br/>
+
+======================================================================
+
+PARTIE 2 : STRUCTURE ACTUELLE DU PROJET (Analyse Actualisée)
+
+======================================================================
+
+5. BACKEND - LA CUISINE (Python 3.x + FastAPI 0.104.1 + PostgreSQL)
+----------------------------------------------------------------------
+
+STACK TECHNIQUE BACKEND :
+✓ Framework : FastAPI 0.104.1 (ultra-rapide, supporta async/await)
+✓ Serveur : Uvicorn 0.24.0 (serveur ASGI)
+✓ ORM : SQLAlchemy 2.0.23 (Object-Relational Mapping)
+✓ Base de données : PostgreSQL (driver psycopg2-binary 2.9.9)
+✓ Validation : Pydantic 2.5.0 (validation automatique des entrées)
+✓ Authentification : PyJWT 2.12.1 + Bcrypt 4.1.1
+✓ HTTP Client : Httpx 0.25.2 (async requests pour APIs externes)
+
+5.1 MODÈLES DE DONNÉES : models.py (7 modèles SQLAlchemy)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Les 7 modèles principaux :
+
+1. USER (Central Hub)
+   - id (Primary Key)
+   - nom, prenom, email (unique), password_hash
+   - role (TUTELLE, DIRECTEUR, CHEF_LABO, CHEF_EQUIPE, CHERCHEUR)
+   - institution_id (FK → Institution)
+   - labo_id (FK → Laboratoire, nullable)
+   - equipe_id (FK → Equipe, nullable)
+   - openalex_id (pour lier avec OpenAlex)
+   - is_active (soft delete)
+   - Relations : institution, laboratoire, equipe, publications
+
+2. INSTITUTION
+   - id (Primary Key)
+   - nom, code, ville
+   - tutelle_id (FK → User avec rôle TUTELLE)
+   - Relations : tutelle, laboratoires, rapports, users
+
+3. LABORATOIRE
+   - id (Primary Key)
+   - nom, code
+   - institution_id (FK → Institution)
+   - Relations : institution, equipes
+
+4. EQUIPE
+   - id (Primary Key)
+   - nom, code
+   - labo_id (FK → Laboratoire)
+   - chef_equipe_id (FK → User)
+   - Relations : laboratoire, chef_equipe, users
+
+5. PUBLICATION
+   - id (Primary Key)
+   - titre, auteurs, annee
+   - user_id (FK → User)
+   - author_id_openalex (pour lien externe)
+   - cited_by_count (nombre de citations)
+   - Relation : user
+
+6. RAPPORT
+   - id (Primary Key)
+   - titre, contenu, date_creation
+   - institution_id (FK → Institution)
+   - created_by (FK → User)
+   - Relation : institution, creator
+
+7. NOTIFICATION
+   - id (Primary Key)
+   - message, title
+   - user_id (FK → User)
+   - is_read (Default: False)
+   - Relation : user
 
 ======================================================================
 

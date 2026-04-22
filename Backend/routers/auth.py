@@ -168,6 +168,9 @@ def get_profile(current_user: User = Depends(get_current_user)):
             "labo_name": current_user.labo_name,
             "equipe_name": current_user.equipe_name,
             "author_id_openalex": current_user.author_id_openalex,
+            "phone_number": current_user.phone_number,
+            "date_of_birth": str(current_user.date_of_birth) if current_user.date_of_birth else None,
+            "profile_picture_url": current_user.profile_picture_url,
             "is_active": current_user.is_active,
             "created_at": str(current_user.created_at) if current_user.created_at else None
         }

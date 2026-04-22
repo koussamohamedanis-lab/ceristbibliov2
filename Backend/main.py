@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from database import engine, Base
-from routers import auth, institutions, users, hierarchy, hierarchy_management, rapports, teams, registration
+from routers import auth, institutions, users, hierarchy, hierarchy_management, rapports, teams, registration, chat, messaging
 from fastapi import Request
 from fastapi.responses import JSONResponse
 import logging
 import traceback
+import os
 
 # Cette ligne crée les tables dans ta base ceristbiblio au démarrage
 Base.metadata.create_all(bind=engine)
@@ -39,7 +41,14 @@ app.include_router(hierarchy_management.router)
 app.include_router(rapports.router)
 app.include_router(teams.router)
 app.include_router(registration.router)
+app.include_router(chat.router)
+app.include_router(messaging.router)
 
 @app.get("/")
 def root():
     return {"message": "Bienvenue sur l'API du projet PFE"}
+
+# Mount uploads directory for serving avatars
+uploads_path = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(uploads_path, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_path), name="uploads")

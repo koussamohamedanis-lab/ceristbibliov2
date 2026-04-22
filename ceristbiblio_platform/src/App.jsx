@@ -28,6 +28,8 @@ import HelloWorld from "./pages/HelloWorld";
 import Comparaison from "./pages/Comparaison";
 import Rapports from "./pages/Rapports";
 import Settings from "./pages/Settings";
+import Chatbot from "./pages/Chatbot";
+import Messaging from "./pages/Messaging";
 import './assets/style.css';
 import './assets/dashboard.css';
 
@@ -176,6 +178,26 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Settings />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Messagerie - Tous les rôles */}
+                <Route 
+                  path="/messaging" 
+                  element={
+                    <ProtectedRoute>
+                      <Messaging />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Assistant IA - Tous les rôles */}
+                <Route 
+                  path="/assistant-ia" 
+                  element={
+                    <ProtectedRoute>
+                      <Chatbot />
                     </ProtectedRoute>
                   } 
                 />

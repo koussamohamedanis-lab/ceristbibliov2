@@ -568,7 +568,7 @@ def get_director_statistics(director_id: int, db: Session = Depends(get_db)):
         for p in publications
     ]
     from services.bibliometrix import calculate_group_h_index
-    stats = {"h_index": 0}
+    stats = {"h_index": 0, "g_index": 0, "i10_index": 0}
     if pub_dicts:
         stats = calculate_group_h_index(pub_dicts)
     avg_h_index = stats.get("h_index", 0)
@@ -581,6 +581,8 @@ def get_director_statistics(director_id: int, db: Session = Depends(get_db)):
         "total_publications": stats.get("total_publications", total_publications),
         "total_citations": stats.get("total_citations", total_citations),
         "avg_h_index": round(avg_h_index, 2),
+        "g_index": stats.get("g_index", 0),
+        "i10_index": stats.get("i10_index", 0),
         "publication_by_year": pub_by_year_raw,
     }
 
@@ -617,7 +619,7 @@ def get_laboratory_statistics(lab_id: int, db: Session = Depends(get_db)):
         for p in publications
     ]
     from services.bibliometrix import calculate_group_h_index
-    stats = {"h_index": 0}
+    stats = {"h_index": 0, "g_index": 0, "i10_index": 0}
     if pub_dicts:
         stats = calculate_group_h_index(pub_dicts)
     avg_h_index = stats.get("h_index", 0)
@@ -633,6 +635,8 @@ def get_laboratory_statistics(lab_id: int, db: Session = Depends(get_db)):
         "total_publications": stats.get("total_publications", total_publications),
         "total_citations": stats.get("total_citations", total_citations),
         "avg_h_index": round(avg_h_index, 2),
+        "g_index": stats.get("g_index", 0),
+        "i10_index": stats.get("i10_index", 0),
         "publication_by_year": pub_by_year_raw,
     }
 
@@ -666,7 +670,7 @@ def get_team_statistics(team_id: int, db: Session = Depends(get_db)):
         for p in publications
     ]
     from services.bibliometrix import calculate_group_h_index
-    stats = {"h_index": 0}
+    stats = {"h_index": 0, "g_index": 0, "i10_index": 0}
     if pub_dicts:
         stats = calculate_group_h_index(pub_dicts)
     avg_h_index = stats.get("h_index", 0)
@@ -682,6 +686,8 @@ def get_team_statistics(team_id: int, db: Session = Depends(get_db)):
         "total_publications": stats.get("total_publications", total_publications),
         "total_citations": stats.get("total_citations", total_citations),
         "avg_h_index": round(avg_h_index, 2),
+        "g_index": stats.get("g_index", 0),
+        "i10_index": stats.get("i10_index", 0),
         "publication_by_year": pub_by_year_raw,
     }
 
@@ -756,7 +762,7 @@ def get_global_statistics(db: Session = Depends(get_db), current_user: User = De
             for p in publications
         ]
         from services.bibliometrix import calculate_group_h_index
-        stats = {"h_index": 0}
+        stats = {"h_index": 0, "g_index": 0, "i10_index": 0}
         if pub_dicts:
             stats = calculate_group_h_index(pub_dicts)
         avg_h_index = stats.get("h_index", 0)
@@ -768,6 +774,8 @@ def get_global_statistics(db: Session = Depends(get_db), current_user: User = De
             "total_publications": stats.get("total_publications", total_publications),
             "total_citations": stats.get("total_citations", total_citations),
             "avg_h_index": round(avg_h_index, 2),
+            "g_index": stats.get("g_index", 0),
+            "i10_index": stats.get("i10_index", 0),
             "total_directors": total_directors
         }
     except Exception as e:

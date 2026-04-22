@@ -1,4 +1,4 @@
-import { FaUserCircle, FaBell, FaQuestionCircle, FaMoon, FaSun } from "react-icons/fa";
+import { FaBell, FaQuestionCircle, FaMoon, FaSun } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +10,7 @@ function Header() {
   });
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [profilePicUrl, setProfilePicUrl] = useState('');
   
   const [notifications, setNotifications] = useState([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -56,6 +57,26 @@ function Header() {
     const role = localStorage.getItem('userRole') || 'Chercheur'
     setUserName(name)
     setUserRole(role)
+
+    // Fetch profile picture
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        const res = await fetch('http://localhost:8000/auth/profile/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.profile_picture_url) {
+            setProfilePicUrl(`http://localhost:8000${data.profile_picture_url}`);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchProfile();
   }, [])
 
   const handleLogout = () => {
@@ -80,6 +101,16 @@ function Header() {
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
+  };
+
+  // Get initials from user name for fallback avatar
+  const getInitials = (name) => {
+    if (!name || name === 'Utilisateur') return 'U';
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return (parts[0]?.[0] || 'U').toUpperCase();
   };
 
   return (
@@ -131,7 +162,18 @@ function Header() {
           className="nav-profile"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <FaUserCircle className="profile-avatar" />
+          {/* Avatar: image or initials fallback */}
+          {profilePicUrl ? (
+            <img 
+              src={profilePicUrl} 
+              alt="Avatar" 
+              className="header-avatar-img"
+            />
+          ) : (
+            <div className="header-avatar-initials">
+              {getInitials(userName)}
+            </div>
+          )}
            <div className="profile-info">
             <span className="user-name">{userName}</span>
             <span className="user-role">{userRole}</span>
