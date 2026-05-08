@@ -4,9 +4,9 @@ import {
   FiVideo, FiX, FiChevronRight, FiSearch, FiFile, FiPlay, FiSquare,
   FiPhoneOff, FiUser
 } from 'react-icons/fi'
-import api, { uploadAvatar } from '../services/api'
+import api, { uploadAvatar, API_BASE_URL } from '../services/api'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = API_BASE_URL
 const WS_BASE = `ws://${window.location.host}`
 
 export default function Messaging() {
@@ -478,8 +478,8 @@ export default function Messaging() {
                     <span className="msg-conv-name">{c.name}</span>
                     {c.last_message && (
                       <span className="msg-conv-preview">
-                        {c.last_message.type === 'audio' ? '🎤 Message vocal' :
-                         c.last_message.type === 'file' ? '📎 Fichier' :
+                        {c.last_message.type === 'audio' ? 'Message vocal' :
+                         c.last_message.type === 'file' ? 'Fichier' :
                          c.last_message.content?.substring(0, 40)}
                       </span>
                     )}
@@ -506,8 +506,8 @@ export default function Messaging() {
                     <span className="msg-conv-name">{c.name}</span>
                     {c.last_message && (
                       <span className="msg-conv-preview">
-                        {c.last_message.type === 'audio' ? '🎤 Message vocal' :
-                         c.last_message.type === 'file' ? '📎 Fichier' :
+                        {c.last_message.type === 'audio' ? 'Message vocal' :
+                         c.last_message.type === 'file' ? 'Fichier' :
                          c.last_message.content?.substring(0, 40)}
                       </span>
                     )}

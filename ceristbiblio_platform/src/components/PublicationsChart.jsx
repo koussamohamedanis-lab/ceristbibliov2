@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FiBarChart2, FiTrendingUp } from 'react-icons/fi'
 import { 
   LineChart, 
   BarChart,
@@ -66,7 +67,7 @@ const PublicationsChart = ({
               fontSize: '12px'
             }}
           >
-            📊 Barres
+            <FiBarChart2 size={14} /> Barres
           </button>
           <button
             onClick={() => setActiveChart('line')}
@@ -80,7 +81,7 @@ const PublicationsChart = ({
               fontSize: '12px'
             }}
           >
-            📈 Courbe
+            <FiTrendingUp size={14} /> Courbe
           </button>
         </div>
       </div>

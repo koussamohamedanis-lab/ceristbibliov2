@@ -4,7 +4,7 @@ import { getTutelleFullHierarchy } from '../services/api';
 import { 
   FaBuilding, FaUsers, FaUser, 
   FaFlask, FaChevronDown, FaChevronRight, FaSitemap, 
-  FaUniversity, FaGlobeAfrica 
+  FaUniversity, FaGlobeAfrica, FaMapMarkerAlt 
 } from 'react-icons/fa';
 
 function InstitutionalStructure() {
@@ -204,9 +204,9 @@ function InstitutionalStructure() {
           <div style={{ flex: 1 }}>
             <h3 style={{ margin: 0, color: '#fff', fontSize: '1rem', fontWeight: 700, fontFamily: 'var(--font-title)' }}>{inst.name}</h3>
             <div style={{ display: 'flex', gap: '16px', marginTop: '4px', flexWrap: 'wrap' }}>
-              {inst.ville && <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}>📍 {inst.ville}</span>}
-              {inst.directeur && <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}>👤 Dir. {inst.directeur}</span>}
-              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}>🔬 {inst.lab_count} labo{inst.lab_count > 1 ? 's' : ''}</span>
+              {inst.ville && <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}><FaMapMarkerAlt size={10} style={{marginRight: '4px'}}/> {inst.ville}</span>}
+              {inst.directeur && <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}><FaUser size={10} style={{marginRight: '4px'}}/> Dir. {inst.directeur}</span>}
+              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}><FaFlask size={10} style={{marginRight: '4px'}}/> {inst.lab_count} labo{inst.lab_count > 1 ? 's' : ''}</span>
             </div>
           </div>
           <div style={{ color: 'rgba(255,255,255,0.7)' }}>{expandedInstitutions[inst.id] ? <FaChevronDown size={14} /> : <FaChevronRight size={14} />}</div>

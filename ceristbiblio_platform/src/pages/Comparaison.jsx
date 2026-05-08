@@ -201,8 +201,8 @@ function Comparaison() {
                   <div style={{ width: '100%', height: 380 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart cx="50%" cy="50%" outerRadius="75%" data={advancedStats.radar}>
-                        <PolarGrid stroke="#e2e8f0" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
+                        <PolarGrid stroke="var(--bordres)" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--sec-text)', fontSize: 10 }} />
                         <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                         <Radar name="Productivité" dataKey="Productivité" stroke="#16A34A" fill="#16A34A" fillOpacity={0.4} />
                         <Radar name="Impact" dataKey="Impact (Citations)" stroke="#2563EB" fill="#2563EB" fillOpacity={0.4} />
@@ -220,9 +220,9 @@ function Comparaison() {
                   <div style={{ width: '100%', height: 380 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis type="number" dataKey="x" name="Centralité" tick={false} axisLine={{ stroke: '#cbd5e1' }} />
-                        <YAxis type="number" dataKey="y" name="Densité" tick={false} axisLine={{ stroke: '#cbd5e1' }} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--bordres)" />
+                        <XAxis type="number" dataKey="x" name="Centralité" tick={false} axisLine={{ stroke: 'var(--bordres)' }} />
+                        <YAxis type="number" dataKey="y" name="Densité" tick={false} axisLine={{ stroke: 'var(--bordres)' }} />
                         <ZAxis type="number" dataKey="z" range={[150, 1200]} name="Volume" />
                         <Tooltip 
                           cursor={{ strokeDasharray: '3 3' }} 

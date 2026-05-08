@@ -2,6 +2,7 @@ import { useSearch } from '../context/useSearch';
 import { useState } from 'react';
 import { FaSpinner } from 'react-icons/fa';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/api';
 import ResearcherCard from '../components/ResearcherCard';
 
 function Results() {
@@ -14,7 +15,7 @@ function Results() {
     setLoadingMore(true);
     try {
       const response = await axios.post(
-        `http://localhost:8000/api/researcher/search/advanced`,
+        `${API_BASE_URL}/api/researcher/search/advanced`,
         {
           criteria: searchCriteria.criteria,
           primaryQuery: searchCriteria.primaryQuery,

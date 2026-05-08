@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { FiLock, FiUser, FiSave, FiCheck, FiAlertCircle, FiLink, FiPhone, FiCalendar, FiCamera } from 'react-icons/fi'
 import { changePassword, updateProfile, getMyProfile, uploadAvatar } from '../services/api'
+import { API_BASE_URL } from '../services/api'
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile')
@@ -163,7 +164,7 @@ export default function Settings() {
 
   const getAvatarUrl = () => {
     if (profile?.profile_picture_url) {
-      return `http://localhost:8000${profile.profile_picture_url}`
+      return `${API_BASE_URL}${profile.profile_picture_url}`
     }
     return null
   }

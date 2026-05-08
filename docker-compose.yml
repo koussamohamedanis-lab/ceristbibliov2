@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  # =====================================================
+  # PostgreSQL Database
+  # =====================================================
+  db:
+    image: postgres:16-alpine
+    container_name: ceristbiblio-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-anis}
+      POSTGRES_DB: ${POSTGRES_DB:-ceristbiblio}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ceristbiblio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # =====================================================
+  # FastAPI Backend (Python + optional R)
+  # =====================================================
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: ceristbiblio-backend
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./Backend/uploads:/app/uploads      # fichiers uploadés (avatars, messages, docs)
+
+  # =====================================================
+  # React Frontend (Vite build → Nginx)
+  # =====================================================
+  frontend:
+    build:
+      context: ./ceristbiblio_platform
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    container_name: ceristbiblio-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:
+    driver: local

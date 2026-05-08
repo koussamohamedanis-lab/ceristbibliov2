@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { FaPaperPlane, FaRobot, FaUser, FaLightbulb } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaLightbulb, FaExclamationTriangle } from 'react-icons/fa';
 import api from '../services/api';
 
 /**
@@ -74,7 +74,7 @@ export default function Chatbot() {
       // Ajouter aussi un message d'erreur dans le chat
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '⚠️ Désolé, je n\'ai pas pu traiter votre demande. Le service est temporairement indisponible. Veuillez réessayer dans quelques instants.',
+        content: <><FaExclamationTriangle style={{marginRight: '5px', color: 'var(--accent-red)'}}/> Désolé, je n'ai pas pu traiter votre demande. Le service est temporairement indisponible. Veuillez réessayer dans quelques instants.</>,
         timestamp: new Date(),
         isError: true
       }]);
@@ -181,11 +181,13 @@ export default function Chatbot() {
                 }}
               >
                 <div style={styles.messageContent}>
-                  {msg.content.split('\n').map((line, i) => (
+                  {typeof msg.content === 'string' ? msg.content.split('\n').map((line, i) => (
                     <p key={i} style={{ margin: line === '' ? '0.5rem 0' : '0.25rem 0' }}>
                       {renderMarkdown(line)}
                     </p>
-                  ))}
+                  )) : (
+                    <p style={{ margin: '0.25rem 0' }}>{msg.content}</p>
+                  )}
                 </div>
                 <span style={{
                   ...styles.timestamp,
@@ -255,7 +257,7 @@ export default function Chatbot() {
       {/* Toast Error Notification */}
       {error && (
         <div style={styles.toast}>
-          <span>⚠️ {error}</span>
+          <span><FaExclamationTriangle style={{marginRight: '8px'}}/> {error}</span>
           <button onClick={() => setError('')} style={styles.toastClose}>✕</button>
         </div>
       )}

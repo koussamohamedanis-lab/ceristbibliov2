@@ -16,7 +16,7 @@ if not SQLALCHEMY_DATABASE_URL:
     raise ValueError("ERREUR : L'URL de la base de données n'a pas été trouvée. Vérifie ton fichier .env")
 
 # 3. Créer le moteur SQLAlchemy
-# On ajoute echo=True pour voir les requêtes SQL dans la console (très utile pour ton PFE)
+# On ajoute echo=True pour voir les requêtes SQL dans la console
 engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
 # 4. Créer la fabrique de sessions

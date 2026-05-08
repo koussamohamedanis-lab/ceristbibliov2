@@ -15,9 +15,10 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="CERIST Bibliométrie API")
 
 # Configuration du CORS (Indispensable pour React)
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost,http://localhost:80").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

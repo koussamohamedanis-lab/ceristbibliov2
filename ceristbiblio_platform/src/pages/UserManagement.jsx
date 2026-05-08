@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import '../assets/dashboard.css';
 import api from '../services/api';
-import { FaEdit, FaTrash, FaPlus, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaTimes, FaLightbulb } from 'react-icons/fa';
 
 // Roles that each role is allowed to create
 const ALLOWED_CREATION_ROLES = {
@@ -379,12 +379,12 @@ function UserManagement() {
               {/* Auto-scope message */}
               {currentUserRole === 'directeur' && (
                 <p style={{ fontSize: '12px', color: 'var(--sec-text)', marginBottom: '10px' }}>
-                  💡 L'utilisateur sera automatiquement affecté à votre institution.
+                  <FaLightbulb style={{ color: 'var(--accent-amber)', marginRight: '5px' }}/> L'utilisateur sera automatiquement affecté à votre institution.
                 </p>
               )}
               {currentUserRole === 'chef_labo' && (
                 <p style={{ fontSize: '12px', color: 'var(--sec-text)', marginBottom: '10px' }}>
-                  💡 L'utilisateur sera automatiquement affecté à votre laboratoire.
+                  <FaLightbulb style={{ color: 'var(--accent-amber)', marginRight: '5px' }}/> L'utilisateur sera automatiquement affecté à votre laboratoire.
                 </p>
               )}
 

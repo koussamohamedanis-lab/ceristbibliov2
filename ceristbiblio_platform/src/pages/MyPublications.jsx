@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import '../assets/dashboard.css';
+import { FiCheck, FiX, FiExternalLink } from 'react-icons/fi';
 
 function MyPublications() {
   const [publications, setPublications] = useState([]);
@@ -115,7 +116,7 @@ function MyPublications() {
                 className="modal-close"
                 onClick={() => setSelectedPub(null)}
               >
-                ✕
+                <FiX />
               </button>
             </div>
             <div className="modal-body">
@@ -144,7 +145,7 @@ function MyPublications() {
                 <p>
                   {selectedPub.doi ? (
                     <a href={`https://doi.org/${selectedPub.doi}`} target="_blank" rel="noopener noreferrer" className="detail-link">
-                      {selectedPub.doi} ↗
+                      {selectedPub.doi} <FiExternalLink size={12} style={{marginLeft: '4px'}}/>
                     </a>
                   ) : 'N/A'}
                 </p>
@@ -154,7 +155,7 @@ function MyPublications() {
                 <p>
                   {selectedPub.openalex_id ? (
                     <a href={`https://openalex.org/${selectedPub.openalex_id}`} target="_blank" rel="noopener noreferrer" className="detail-link">
-                      {selectedPub.openalex_id} ↗
+                      {selectedPub.openalex_id} <FiExternalLink size={12} style={{marginLeft: '4px'}}/>
                     </a>
                   ) : 'N/A'}
                 </p>
@@ -164,14 +165,14 @@ function MyPublications() {
                 <p>
                   {selectedPub.url ? (
                     <a href={selectedPub.url} target="_blank" rel="noopener noreferrer" className="detail-link">
-                      Voir la publication ↗
+                      Voir la publication <FiExternalLink size={12} style={{marginLeft: '4px'}}/>
                     </a>
                   ) : 'N/A'}
                 </p>
               </div>
               <div className="detail-field">
                 <strong>Accès Ouvert:</strong>
-                <p>{selectedPub.is_open_access ? '✓ Oui' : '✗ Non'}</p>
+                <p>{selectedPub.is_open_access ? <><FiCheck color="green" /> Oui</> : <><FiX color="red" /> Non</>}</p>
               </div>
               {selectedPub.abstract && (
                 <div className="detail-field">

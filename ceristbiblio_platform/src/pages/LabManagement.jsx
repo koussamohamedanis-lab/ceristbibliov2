@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import '../assets/dashboard.css';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ScatterChart, Scatter, ZAxis } from 'recharts';
+import api from '../services/api';
 
 
 function LabManagement() {
@@ -23,66 +24,43 @@ function LabManagement() {
     setSelectedTeam(team);
     setTeamMembers([]);
     try {
-      const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://localhost:8000/hierarchy/teams/${team.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTeamMembers(data.chercheurs || []);
-      }
+      const res = await api.get(`/hierarchy/teams/${team.id}`);
+      setTeamMembers(res.data.chercheurs || []);
     } catch (err) {
-      console.error("Erreur lors du chargement des membres:", err);
+      // Team details not available
     }
   };
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
       
       // 1. Fetch lab basic stats
-      const statsRes = await fetch(`http://localhost:8000/hierarchy/labos/me/stats`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (statsRes.ok) {
-          const data = await statsRes.json();
-          setLabStats(data);
-          
-          const labId = data.id;
-          
-          // 2. Fetch teams comparison
-          const comparisonRes = await fetch(`http://localhost:8000/hierarchy/laboratories/${labId}/teams-comparison`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (comparisonRes.ok) {
-              const compData = await comparisonRes.json();
-              setTeamsComparison(compData);
-          }
+      const statsRes = await api.get('/hierarchy/labos/me/stats');
+      const data = statsRes.data;
+      setLabStats(data);
+      
+      const labId = data.id;
+      
+      // 2. Fetch teams comparison
+      try {
+        const comparisonRes = await api.get(`/hierarchy/laboratories/${labId}/teams-comparison`);
+        setTeamsComparison(comparisonRes.data);
+      } catch (e) {
+        // Teams comparison not available
+      }
 
-          // 3. Fetch Advanced Mapping
-          try {
-            const advRes = await fetch(`http://localhost:8000/hierarchy/laboratories/${labId}/advanced-mapping`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (advRes.ok) {
-              const advData = await advRes.json();
-              setAdvancedStats(advData);
-            }
-          } catch (e) {
-            console.warn("Advanced stats not available");
-          }
+      // 3. Fetch Advanced Mapping
+      try {
+        const advRes = await api.get(`/hierarchy/laboratories/${labId}/advanced-mapping`);
+        setAdvancedStats(advRes.data);
+      } catch (e) {
+        // Advanced stats not available
       }
 
       setError(null);
     } catch (err) {
-      setError(err.message);
-      console.error(err);
+      setError(err.response?.data?.detail || err.message);
     } finally {
       setLoading(false);
     }
@@ -127,7 +105,7 @@ function LabManagement() {
             {teamsComparison.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={teamsComparison}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--bordres)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} />
                   <Tooltip 
@@ -157,8 +135,8 @@ function LabManagement() {
               <div style={{ width: '100%', height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="70%" data={advancedStats.radar}>
-                    <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
+                    <PolarGrid stroke="var(--bordres)" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--sec-text)', fontSize: 10 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                     <Radar name="Productivité" dataKey="Productivité" stroke="#8884d8" fill="#8884d8" fillOpacity={0.4} />
                     <Radar name="Impact" dataKey="Impact (Citations)" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.4} />
@@ -176,9 +154,9 @@ function LabManagement() {
               <div style={{ width: '100%', height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis type="number" dataKey="x" name="Centralité" tick={false} axisLine={{ stroke: '#cbd5e1' }} />
-                    <YAxis type="number" dataKey="y" name="Densité" tick={false} axisLine={{ stroke: '#cbd5e1' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--bordres)" />
+                    <XAxis type="number" dataKey="x" name="Centralité" tick={false} axisLine={{ stroke: 'var(--bordres)' }} />
+                    <YAxis type="number" dataKey="y" name="Densité" tick={false} axisLine={{ stroke: 'var(--bordres)' }} />
                     <ZAxis type="number" dataKey="z" range={[100, 1000]} name="Fréquence" />
                     <Tooltip 
                       cursor={{ strokeDasharray: '3 3' }} 

@@ -1,6 +1,7 @@
 import { FaBell, FaQuestionCircle, FaMoon, FaSun } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../services/api";
 
 function Header() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ function Header() {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) return;
-        const res = await fetch('http://localhost:8000/api/users/me/notifications', {
+        const res = await fetch(`${API_BASE_URL}/api/users/me/notifications`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -41,7 +42,7 @@ function Header() {
   const clearNotifications = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      await fetch('http://localhost:8000/api/users/me/notifications', {
+      await fetch(`${API_BASE_URL}/api/users/me/notifications`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -63,13 +64,13 @@ function Header() {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) return;
-        const res = await fetch('http://localhost:8000/auth/profile/me', {
+        const res = await fetch(`${API_BASE_URL}/auth/profile/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
           const data = await res.json();
           if (data.profile_picture_url) {
-            setProfilePicUrl(`http://localhost:8000${data.profile_picture_url}`);
+            setProfilePicUrl(`${API_BASE_URL}${data.profile_picture_url}`);
           }
         }
       } catch (e) {

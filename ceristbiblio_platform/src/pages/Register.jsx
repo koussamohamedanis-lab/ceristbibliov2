@@ -11,12 +11,15 @@ import {
   registerDirecteur,
 } from '../services/api'
 import '../assets/auth.css'
+import logo from '../assets/logo-removebg-preview.png'
+import { FiCheck, FiEye, FiEyeOff } from 'react-icons/fi'
+import { FaMicroscope, FaUsers, FaUniversity, FaGraduationCap } from 'react-icons/fa'
 
 const ROLES = [
-  { value: 'chercheur', label: 'Chercheur', icon: '🔬', desc: 'Recherche individuelle' },
-  { value: 'chef_equipe', label: "Chef d'Équipe", icon: '👥', desc: 'Gérer votre équipe' },
-  { value: 'chef_labo', label: 'Chef de Laboratoire', icon: '🏛️', desc: 'Diriger un laboratoire' },
-  { value: 'directeur', label: "Directeur d'Institution", icon: '🎓', desc: 'Diriger une institution' },
+  { value: 'chercheur', label: 'Chercheur', icon: <FaMicroscope />, desc: 'Recherche individuelle' },
+  { value: 'chef_equipe', label: "Chef d'Équipe", icon: <FaUsers />, desc: 'Gérer votre équipe' },
+  { value: 'chef_labo', label: 'Chef de Laboratoire', icon: <FaUniversity />, desc: 'Diriger un laboratoire' },
+  { value: 'directeur', label: "Directeur d'Institution", icon: <FaGraduationCap />, desc: 'Diriger une institution' },
 ]
 
 export default function Register() {
@@ -25,6 +28,8 @@ export default function Register() {
   const [selectedRole, setSelectedRole] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // Org data for cascading selects
   const [tutelles, setTutelles] = useState([])
@@ -576,31 +581,51 @@ export default function Register() {
 
       <div className="auth-form-group">
         <label className="auth-label">Mot de passe</label>
-        <input
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="••••••••"
-          required
-          minLength={6}
-          className="auth-input"
-          id="input-password"
-        />
+        <div className="password-input-wrapper">
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="••••••••"
+            required
+            minLength={6}
+            className="auth-input"
+            id="input-password"
+          />
+          <button
+            type="button"
+            className="password-toggle-btn"
+            onClick={() => setShowPassword(!showPassword)}
+            tabIndex="-1"
+          >
+            {showPassword ? <FiEyeOff /> : <FiEye />}
+          </button>
+        </div>
       </div>
 
       <div className="auth-form-group">
         <label className="auth-label">Confirmer le mot de passe</label>
-        <input
-          type="password"
-          name="confirmPassword"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          placeholder="••••••••"
-          required
-          className="auth-input"
-          id="input-confirm-password"
-        />
+        <div className="password-input-wrapper">
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="••••••••"
+            required
+            className="auth-input"
+            id="input-confirm-password"
+          />
+          <button
+            type="button"
+            className="password-toggle-btn"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            tabIndex="-1"
+          >
+            {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+          </button>
+        </div>
       </div>
 
       {error && <div className="auth-error">{error}</div>}
@@ -625,7 +650,7 @@ export default function Register() {
     <div className="register-progress">
       {[1, 2, 3].map(s => (
         <div key={s} className={`progress-step ${step >= s ? 'progress-step-active' : ''} ${step === s ? 'progress-step-current' : ''}`}>
-          <div className="progress-dot">{step > s ? '✓' : s}</div>
+          <div className="progress-dot">{step > s ? <FiCheck /> : s}</div>
           <span className="progress-label">
             {s === 1 ? 'Rôle' : s === 2 ? 'Organisation' : 'Profil'}
           </span>
@@ -652,7 +677,8 @@ export default function Register() {
   return (
     <div className="auth-container">
       <div className={`auth-card ${step === 1 ? 'auth-card-wide' : ''}`}>
-        <div className="auth-header">
+        <div className="auth-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src={logo} alt="CERIST Logo" style={{ height: '70px', marginBottom: '15px' }} />
           <h1 className="auth-title">CERIST Platform</h1>
           <p className="auth-subtitle">Inscription</p>
           {renderRoleBadge()}

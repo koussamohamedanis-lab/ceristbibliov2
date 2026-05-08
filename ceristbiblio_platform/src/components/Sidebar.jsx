@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { 
   FaHome, FaDatabase, FaCompass, FaChartBar, 
   FaChevronDown, FaUsers, FaBuilding, FaChartLine, FaCog, FaNetworkWired, FaBalanceScale, FaFileAlt,
-  FaSignOutAlt, FaRobot, FaComments
+  FaSignOutAlt, FaRobot, FaComments, FaProjectDiagram
 } from "react-icons/fa";
 
 function Sidebar() {
@@ -111,6 +111,14 @@ function Sidebar() {
                 {!isCollapsed && <span>Comparaison</span>}
               </NavLink>
             )}
+
+            {/* COLLABORATION - Tous les rôles de gestion */}
+            {hasAccess(['chef_equipe', 'chef_labo', 'directeur', 'tutelle']) && (
+              <NavLink to="/collaboration" className="nav-item">
+                <FaProjectDiagram className="icon-svg" />
+                {!isCollapsed && <span>Collaboration</span>}
+              </NavLink>
+            )}
           </>
         ) : (
           // NORMAL MODE - chercheur, chef_equipe
@@ -136,6 +144,10 @@ function Sidebar() {
                 <NavLink to="/team-management" className="nav-item">
                   <FaUsers className="icon-svg" />
                   {!isCollapsed && <span>Mon Équipe</span>}
+                </NavLink>
+                <NavLink to="/collaboration" className="nav-item">
+                  <FaProjectDiagram className="icon-svg" />
+                  {!isCollapsed && <span>Collaboration</span>}
                 </NavLink>
               </>
             )}

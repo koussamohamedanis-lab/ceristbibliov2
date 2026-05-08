@@ -105,6 +105,23 @@
     width: 100%;
 }
 
+/* Recharts dark mode text adaptation */
+.recharts-legend-item-text,
+.recharts-cartesian-axis-tick-value {
+    fill: var(--sec-text) !important;
+    color: var(--sec-text) !important;
+}
+
+.recharts-default-tooltip {
+    background-color: var(--bg-cartes) !important;
+    border: 1px solid var(--bordres) !important;
+    border-radius: var(--radius) !important;
+}
+
+.recharts-tooltip-label {
+    color: var(--main-text) !important;
+}
+
 .chart-title {
     font-family: var(--font-title);
     font-size: 1.3rem;

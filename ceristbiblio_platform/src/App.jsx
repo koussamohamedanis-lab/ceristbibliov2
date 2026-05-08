@@ -9,7 +9,6 @@ import DashboardProfil from "./pages/DashboardProfil";
 import OpenAlex from "./pages/OpenAlex";
 import Results from "./pages/Results";
 import Overview from "./pages/Overview";
-import Authors from "./pages/Authors";
 import Sources from "./pages/Sources";
 import Documents from "./pages/Documents";
 import TeamManagement from "./pages/TeamManagement";
@@ -20,12 +19,8 @@ import GlobalStatistics from "./pages/GlobalStatistics";
 import SystemConfiguration from "./pages/SystemConfiguration";
 import MyPublications from "./pages/MyPublications";
 import HierarchicalExplorer from "./components/HierarchicalExplorer";
-import TutelleMode from "./pages/TutelleMode";
-import HierarchyDebug from "./pages/HierarchyDebug";
-import HierarchySimple from "./pages/HierarchySimple";
-import HierarchyMinimal from "./pages/HierarchyMinimal";
-import HelloWorld from "./pages/HelloWorld";
 import Comparaison from "./pages/Comparaison";
+import CollaborationAnalysis from "./pages/CollaborationAnalysis";
 import Rapports from "./pages/Rapports";
 import Settings from "./pages/Settings";
 import Chatbot from "./pages/Chatbot";
@@ -118,6 +113,16 @@ function App() {
                   element={
                     <ProtectedRoute allowedRoles={['chef_labo', 'directeur', 'tutelle']}>
                       <Comparaison />
+                    </ProtectedRoute>
+                  } 
+                />
+
+                {/* Collaboration Analysis - Tous les rôles de gestion */}
+                <Route 
+                  path="/collaboration" 
+                  element={
+                    <ProtectedRoute allowedRoles={['chef_equipe', 'chef_labo', 'directeur', 'tutelle']}>
+                      <CollaborationAnalysis />
                     </ProtectedRoute>
                   } 
                 />
@@ -216,56 +221,6 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Results />
-                    </ProtectedRoute>
-                  } 
-                />
-
-                {/* Page de Test Tutelle */}
-                <Route 
-                  path="/tutelle-test" 
-                  element={
-                    <ProtectedRoute>
-                      <TutelleMode />
-                    </ProtectedRoute>
-                  } 
-                />
-
-                {/* Diagnostic Page */}
-                <Route 
-                  path="/hierarchy-debug" 
-                  element={
-                    <ProtectedRoute>
-                      <HierarchyDebug />
-                    </ProtectedRoute>
-                  } 
-                />
-
-                {/* Simple Version */}
-                <Route 
-                  path="/hierarchy-simple" 
-                  element={
-                    <ProtectedRoute>
-                      <HierarchySimple />
-                    </ProtectedRoute>
-                  } 
-                />
-
-                {/* Minimal Version - NO CSS */}
-                <Route 
-                  path="/hierarchy-minimal" 
-                  element={
-                    <ProtectedRoute>
-                      <HierarchyMinimal />
-                    </ProtectedRoute>
-                  } 
-                />
-
-                {/* HelloWorld Test */}
-                <Route 
-                  path="/hello" 
-                  element={
-                    <ProtectedRoute>
-                      <HelloWorld />
                     </ProtectedRoute>
                   } 
                 />

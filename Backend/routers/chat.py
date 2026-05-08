@@ -2,17 +2,15 @@
 Router FastAPI pour le Chatbot IA - Assistant Bibliométrique du CERIST
 =====================================================================
 Ce module fournit un endpoint POST /chat/ask protégé par JWT.
-La fonction generate_llm_response() est mockée pour simuler une réponse IA.
-Pour brancher un vrai LLM (OpenAI, etc.), il suffit de remplacer le corps
-de cette fonction sans modifier le reste du code.
+Utilise l'API Groq (gratuit) avec le modèle LLaMA 3.3 70B pour générer
+des réponses intelligentes sur la bibliométrie.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
-import asyncio
-import random
+import os
 
 from routers.auth import verify_token, get_current_user
 from models import User
@@ -54,39 +52,67 @@ et tu rediriges vers le sujet bibliométrique.
 """
 
 
-# ====================== MOCK LLM FUNCTION ======================
+# ====================== GROQ LLM ======================
+
+_groq_client = None
+
+def _get_groq_client():
+    """Initialise le client Groq (lazy loading)."""
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key or api_key == "YOUR_GROQ_API_KEY_HERE":
+            logging.warning("[Chatbot] ⚠️ GROQ_API_KEY non configurée dans .env")
+            return None
+        try:
+            from groq import Groq
+            _groq_client = Groq(api_key=api_key)
+            logging.info("[Chatbot] ✅ Client Groq initialisé avec succès")
+        except Exception as e:
+            logging.error(f"[Chatbot] ❌ Erreur initialisation Groq: {e}")
+            return None
+    return _groq_client
+
 
 async def generate_llm_response(user_message: str, user_name: str = "Utilisateur") -> str:
     """
-    Fonction mockée qui simule la réponse d'un LLM.
-    
-    Pour brancher un vrai LLM (ex: OpenAI GPT-4), remplacez le corps de cette
-    fonction par un appel API réel :
-    
-    Exemple avec OpenAI :
-    ```python
-    import openai
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    
-    response = await openai.ChatCompletion.acreate(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message}
-        ],
-        max_tokens=1024,
-        temperature=0.7
-    )
-    return response.choices[0].message.content
-    ```
+    Génère une réponse via l'API Groq (LLaMA 3.3 70B).
+    Fallback sur des réponses mockées si Groq n'est pas disponible.
     """
     
-    # Simuler un délai de réflexion réaliste (1-2 secondes)
-    await asyncio.sleep(random.uniform(1.0, 2.5))
+    client = _get_groq_client()
     
+    if client is None:
+        logging.warning("[Chatbot] Groq non disponible, utilisation du fallback mocké")
+        return _mock_response(user_message, user_name)
+    
+    try:
+        # Appel à l'API Groq
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": f"[Utilisateur: {user_name}]\n{user_message}"}
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.7,
+            max_tokens=1024,
+            top_p=0.9,
+        )
+        
+        response = chat_completion.choices[0].message.content
+        logging.info(f"[Chatbot] ✅ Réponse Groq générée ({len(response)} chars)")
+        return response
+        
+    except Exception as e:
+        logging.error(f"[Chatbot] ❌ Erreur API Groq: {e}")
+        # Fallback en cas d'erreur
+        return _mock_response(user_message, user_name)
+
+
+def _mock_response(user_message: str, user_name: str) -> str:
+    """Réponses mockées de secours si Groq n'est pas disponible."""
     message_lower = user_message.lower()
     
-    # Réponses contextuelles mockées selon le sujet détecté
     if any(kw in message_lower for kw in ["h-index", "hindex", "h index", "indice h"]):
         return (
             f"Bonjour {user_name} ! Le **H-index** (indice de Hirsch) est un indicateur bibliométrique "
@@ -97,56 +123,6 @@ async def generate_llm_response(user_message: str, user_name: str = "Utilisateur
             "- H-index 10-20 : Chercheur établi\n"
             "- H-index > 20 : Chercheur senior avec un impact significatif\n\n"
             "Vous pouvez consulter le H-index de vos chercheurs dans la section **Statistiques** de la plateforme."
-        )
-    
-    elif any(kw in message_lower for kw in ["citation", "cité", "citer"]):
-        return (
-            f"Les **citations** sont un indicateur fondamental en bibliométrie, {user_name}. "
-            "Elles reflètent l'impact et la reconnaissance de vos travaux par la communauté scientifique.\n\n"
-            "📈 **Conseils pour augmenter vos citations :**\n"
-            "1. Publiez dans des revues à fort facteur d'impact\n"
-            "2. Collaborez avec des chercheurs internationaux\n"
-            "3. Partagez vos publications sur des plateformes comme ResearchGate\n"
-            "4. Assurez-vous que vos profils OpenAlex sont à jour\n\n"
-            "La plateforme CERIST vous permet de suivre l'évolution de vos citations en temps réel."
-        )
-    
-    elif any(kw in message_lower for kw in ["openalex", "open alex"]):
-        return (
-            "**OpenAlex** est une base de données bibliographique ouverte qui indexe les publications "
-            "scientifiques mondiales. La plateforme CERIST utilise OpenAlex comme source de données "
-            "principale pour :\n\n"
-            "🔍 **Fonctionnalités :**\n"
-            "- Récupérer automatiquement les publications des chercheurs\n"
-            "- Calculer les métriques bibliométriques (H-index, citations, etc.)\n"
-            "- Suivre l'évolution de la production scientifique\n\n"
-            "Si votre profil OpenAlex n'est pas correctement lié, contactez votre chef de laboratoire "
-            "pour mettre à jour votre identifiant OpenAlex."
-        )
-    
-    elif any(kw in message_lower for kw in ["rapport", "report", "pdf"]):
-        return (
-            f"Les **rapports bibliométriques** sont essentiels pour évaluer la performance "
-            "de recherche, {user_name}.\n\n"
-            "📄 **Types de rapports disponibles sur la plateforme :**\n"
-            "- Rapport individuel par chercheur\n"
-            "- Rapport par équipe de recherche\n"
-            "- Rapport par laboratoire\n"
-            "- Rapport institutionnel global\n\n"
-            "Vous pouvez générer et exporter ces rapports en PDF depuis la section "
-            "**Rapports au Ministère** dans le menu de navigation."
-        )
-    
-    elif any(kw in message_lower for kw in ["comparaison", "comparer", "benchmark"]):
-        return (
-            "La **comparaison bibliométrique** vous permet d'évaluer la performance relative "
-            "de vos entités de recherche.\n\n"
-            "📊 **Axes de comparaison disponibles :**\n"
-            "- Comparaison entre chercheurs d'une même équipe\n"
-            "- Comparaison entre équipes d'un laboratoire\n"
-            "- Comparaison entre laboratoires d'une institution\n"
-            "- Comparaison inter-institutionnelle (niveau tutelle)\n\n"
-            "Accédez à l'outil de comparaison via le menu **Comparaison** dans la barre latérale."
         )
     
     elif any(kw in message_lower for kw in ["bonjour", "salut", "hello", "bonsoir"]):
@@ -161,12 +137,6 @@ async def generate_llm_response(user_message: str, user_name: str = "Utilisateur
             "N'hésitez pas à me poser vos questions !"
         )
     
-    elif any(kw in message_lower for kw in ["merci", "thank"]):
-        return (
-            f"Avec plaisir, {user_name} ! N'hésitez pas si vous avez d'autres questions "
-            "sur vos analyses bibliométriques. Je suis là pour vous aider. 😊"
-        )
-    
     else:
         return (
             f"Merci pour votre question, {user_name}. En tant qu'expert bibliométrique du CERIST, "
@@ -176,8 +146,7 @@ async def generate_llm_response(user_message: str, user_name: str = "Utilisateur
             "• **Rapports** : Génération et interprétation de rapports PDF\n"
             "• **Comparaisons** : Benchmarking entre entités de recherche\n"
             "• **Thematic Maps** : Analyse qualitative des publications\n\n"
-            "Pourriez-vous préciser votre question ? Je serai ravi de vous fournir "
-            "une réponse détaillée et pertinente."
+            "⚠️ *Le service IA est en mode hors-ligne. Veuillez configurer la clé GROQ_API_KEY pour activer les réponses intelligentes.*"
         )
 
 

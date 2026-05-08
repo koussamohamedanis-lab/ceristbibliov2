@@ -1001,3 +1001,189 @@ def get_inst_laboratories_comparison(institution_id: int, db: Session = Depends(
         
     return result
 
+
+# ==================== ANALYSE DE COLLABORATION (2.5.3) ====================
+
+@router.get("/collaboration/analysis")
+def get_collaboration_analysis(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Analyse de Collaboration (Section 2.5.3)
+    
+    Analyse les réseaux de co-autorat à partir des publications stockées.
+    Retourne:
+    - Graphe de réseau (nodes + links entre co-auteurs)
+    - Statistiques de collaboration (taille moyenne des équipes, % co-autorat)
+    - Top collaborateurs
+    """
+    try:
+        role = current_user.role
+        
+        # 1. Scope publications according to user role
+        if role in [UserRole.TUTELLE.value, "tutelle"]:
+            inst_ids = [inst.id for inst in db.query(Institution).filter(Institution.tutelle_id == current_user.id).all()]
+            researchers = db.query(User).filter(
+                User.institution_id.in_(inst_ids),
+                User.role.in_(["chercheur", "chef_equipe", "chef_labo"])
+            ).all()
+        elif role == "directeur":
+            researchers = db.query(User).filter(
+                User.institution_id == current_user.institution_id,
+                User.role.in_(["chercheur", "chef_equipe", "chef_labo"])
+            ).all()
+        elif role == "chef_labo":
+            researchers = db.query(User).filter(
+                User.labo_id == current_user.labo_id,
+                User.role.in_(["chercheur", "chef_equipe", "chef_labo"])
+            ).all()
+        elif role == "chef_equipe":
+            researchers = db.query(User).filter(
+                User.equipe_id == current_user.equipe_id
+            ).all()
+        else:
+            researchers = [current_user]
+        
+        researcher_ids = [r.id for r in researchers]
+        
+        # 2. Get all publications for these researchers
+        publications = db.query(Publication).filter(
+            Publication.user_id.in_(researcher_ids)
+        ).all()
+        
+        if not publications:
+            return {
+                "network": {"nodes": [], "links": []},
+                "stats": {
+                    "total_researchers": len(researchers),
+                    "total_publications": 0,
+                    "avg_authors_per_pub": 0,
+                    "collaboration_rate": 0,
+                    "internal_collaborations": 0,
+                },
+                "top_collaborators": [],
+                "collaboration_by_year": []
+            }
+        
+        # 3. Build co-authorship network
+        # Group publications by openalex_id (same paper = same openalex_id)
+        pub_by_openalex = {}
+        for pub in publications:
+            oa_id = pub.openalex_id or f"local_{pub.id}"
+            if oa_id not in pub_by_openalex:
+                pub_by_openalex[oa_id] = []
+            pub_by_openalex[oa_id].append(pub)
+        
+        # Count collaborations between researcher pairs
+        collaboration_counts = {}
+        shared_papers = {}
+        collab_publications = 0
+        
+        for oa_id, pubs in pub_by_openalex.items():
+            author_ids = list(set(p.user_id for p in pubs))
+            if len(author_ids) > 1:
+                collab_publications += 1
+                for i in range(len(author_ids)):
+                    for j in range(i + 1, len(author_ids)):
+                        pair = tuple(sorted([author_ids[i], author_ids[j]]))
+                        collaboration_counts[pair] = collaboration_counts.get(pair, 0) + 1
+                        if pair not in shared_papers:
+                            shared_papers[pair] = []
+                        shared_papers[pair].append(pubs[0].title)
+        
+        # 4. Build network nodes
+        pub_count_by_researcher = {}
+        citation_count_by_researcher = {}
+        for pub in publications:
+            pub_count_by_researcher[pub.user_id] = pub_count_by_researcher.get(pub.user_id, 0) + 1
+            citation_count_by_researcher[pub.user_id] = citation_count_by_researcher.get(pub.user_id, 0) + (pub.cited_by_count or 0)
+        
+        degree_map = {}
+        for (a, b), count in collaboration_counts.items():
+            degree_map[a] = degree_map.get(a, 0) + 1
+            degree_map[b] = degree_map.get(b, 0) + 1
+        
+        nodes = []
+        for r in researchers:
+            if r.id in pub_count_by_researcher:
+                group = "default"
+                if r.equipe_id:
+                    equipe = db.query(Equipe).filter(Equipe.id == r.equipe_id).first()
+                    group = equipe.nom if equipe else "default"
+                elif r.labo_id:
+                    lab = db.query(Laboratoire).filter(Laboratoire.id == r.labo_id).first()
+                    group = lab.nom if lab else "default"
+                    
+                nodes.append({
+                    "id": r.id,
+                    "label": f"{r.prenom} {r.nom}",
+                    "publications": pub_count_by_researcher.get(r.id, 0),
+                    "citations": citation_count_by_researcher.get(r.id, 0),
+                    "degree": degree_map.get(r.id, 0),
+                    "group": group,
+                    "role": r.role
+                })
+        
+        # 5. Build network links
+        links = []
+        for (a, b), count in collaboration_counts.items():
+            links.append({
+                "source": a,
+                "target": b,
+                "weight": count,
+                "papers": shared_papers.get((a, b), [])[:3]
+            })
+        
+        # 6. Compute collaboration statistics
+        unique_pubs = len(pub_by_openalex)
+        
+        authors_per_pub = []
+        for oa_id, pubs in pub_by_openalex.items():
+            authors_per_pub.append(len(set(p.user_id for p in pubs)))
+        avg_authors = sum(authors_per_pub) / len(authors_per_pub) if authors_per_pub else 0
+        
+        collab_rate = (collab_publications / unique_pubs * 100) if unique_pubs > 0 else 0
+        
+        # 7. Top collaborators (by degree)
+        top_collabs = sorted(nodes, key=lambda n: n["degree"], reverse=True)[:10]
+        
+        # 8. Collaboration evolution by year
+        collab_by_year = {}
+        solo_by_year = {}
+        for oa_id, pubs in pub_by_openalex.items():
+            year = pubs[0].publication_year or 2024
+            author_count = len(set(p.user_id for p in pubs))
+            if author_count > 1:
+                collab_by_year[year] = collab_by_year.get(year, 0) + 1
+            else:
+                solo_by_year[year] = solo_by_year.get(year, 0) + 1
+        
+        all_years = sorted(set(list(collab_by_year.keys()) + list(solo_by_year.keys())))
+        collaboration_by_year = [
+            {
+                "year": y,
+                "collaboratives": collab_by_year.get(y, 0),
+                "individuelles": solo_by_year.get(y, 0)
+            }
+            for y in all_years
+        ]
+        
+        return {
+            "network": {
+                "nodes": nodes,
+                "links": links
+            },
+            "stats": {
+                "total_researchers": len(researchers),
+                "total_publications": unique_pubs,
+                "avg_authors_per_pub": round(avg_authors, 2),
+                "collaboration_rate": round(collab_rate, 1),
+                "internal_collaborations": len(collaboration_counts),
+            },
+            "top_collaborators": top_collabs,
+            "collaboration_by_year": collaboration_by_year
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] get_collaboration_analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import '../assets/dashboard.css';
+import { FiCheck, FiX } from 'react-icons/fi';
+import { API_BASE_URL } from '../services/api';
 
 function SystemConfiguration() {
   const [config, setConfig] = useState(null);
@@ -16,7 +18,7 @@ function SystemConfiguration() {
       setLoading(true);
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('http://localhost:8000/api/admin/configuration', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/configuration`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -49,7 +51,7 @@ function SystemConfiguration() {
       setSaveStatus('saving');
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('http://localhost:8000/api/admin/configuration', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/configuration`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -82,8 +84,8 @@ function SystemConfiguration() {
         <div className="config-card">
           <h2>Paramètres Généraux</h2>
           
-          {saveStatus === 'success' && <p className="success-message">✓ Configuration sauvegardée avec succès</p>}
-          {saveStatus === 'error' && <p className="error-message">✗ Erreur lors de la sauvegarde</p>}
+          {saveStatus === 'success' && <p className="success-message"><FiCheck /> Configuration sauvegardée avec succès</p>}
+          {saveStatus === 'error' && <p className="error-message"><FiX /> Erreur lors de la sauvegarde</p>}
 
           {config && (
             <form className="config-form">

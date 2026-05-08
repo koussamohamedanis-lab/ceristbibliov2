@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+// In Docker (Nginx proxy): VITE_API_BASE_URL is empty → relative URLs
+// In local dev: defaults to http://localhost:8000
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+export { API_BASE_URL }
+
 const api = axios.create({
-    baseURL: 'http://localhost:8000',
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json'
     },

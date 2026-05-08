@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FiEye, FiEyeOff } from 'react-icons/fi'
 import { login } from '../services/api'
 import '../assets/auth.css'
+
+import logo from '../assets/logo-removebg-preview.png'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -9,6 +12,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -46,7 +50,8 @@ export default function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <div className="auth-header">
+        <div className="auth-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src={logo} alt="CERIST Logo" style={{ height: '70px', marginBottom: '15px' }} />
           <h1 className="auth-title">CERIST Platform</h1>
           <p className="auth-subtitle">Connexion</p>
         </div>
@@ -66,14 +71,24 @@ export default function Login() {
 
           <div className="auth-form-group">
             <label className="auth-label">Mot de passe</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              className="auth-input"
-            />
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="auth-input"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex="-1"
+              >
+                {showPassword ? <FiEyeOff /> : <FiEye />}
+              </button>
+            </div>
           </div>
 
           {error && <div className="auth-error">{error}</div>}

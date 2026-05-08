@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FiTrendingUp, FiBook, FiAward, FiRefreshCw, FiTarget, FiStar } from 'react-icons/fi'
+import { FiTrendingUp, FiBook, FiAward, FiRefreshCw, FiTarget, FiStar, FiFileText } from 'react-icons/fi'
 import KPICard from '../components/KPICard'
 import PublicationsChart from '../components/PublicationsChart'
 import PublicationsTable from '../components/PublicationsTable'
@@ -50,7 +50,6 @@ const DashboardProfil = () => {
 
         // Récupérer les statistiques depuis l'API selon le rôle
         try {
-          console.log('Fetching statistics from API...')
           const userRole = localStorage.getItem('userRole')
           let statsResponse;
 
@@ -68,7 +67,7 @@ const DashboardProfil = () => {
             statsResponse = await api.get(`/api/users/${userId}/stats`)
           }
 
-          console.log('Statistics received:', statsResponse.data)
+
 
           // Mettre à jour les stats
           setStats({
@@ -102,19 +101,17 @@ const DashboardProfil = () => {
 
           setChartData(chartDataFormatted)
         } catch (apiErr) {
-          console.log('Could not fetch statistics from API:', apiErr.message)
+          // Stats API may not be available for all roles
         }
 
         // Récupérer les publications depuis l'API
         try {
-          console.log('Fetching publications from API...')
           const pubsResponse = await api.get(`/api/users/${userId}/publications`)
-          console.log('Publications received:', pubsResponse.data)
 
           const publications = pubsResponse.data.publications || []
           setPublications(publications)
         } catch (apiErr) {
-          console.log('Could not fetch publications from API (normal for non-researchers)', apiErr.message)
+          // Not all users will have publications, this is okay
           // Not all users will have publications, this is okay
         }
 
@@ -123,7 +120,7 @@ const DashboardProfil = () => {
           const profilesResponse = await api.get(`/api/users/${userId}/profiles`)
           setProfiles(profilesResponse.data)
         } catch (err) {
-          console.log('Could not fetch profiles', err.message)
+          // Profiles not critical
         }
 
         setLoading(false)
@@ -247,7 +244,7 @@ const DashboardProfil = () => {
               style={{ backgroundColor: 'var(--accent-blue)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 'var(--radius)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               title="Exporter le dashboard en PDF"
             >
-              📄 Exporter PDF
+              <FiFileText size={16} /> Exporter PDF
             </button>
             <button
               onClick={syncPublications}
@@ -275,31 +272,26 @@ const DashboardProfil = () => {
           title={(user?.role === 'tutelle' || user?.role === 'directeur') ? "H-Index Moyen" : "H-Index"}
           value={hIndex}
           icon={<FiTrendingUp size={32} />}
-          backgroundColor="rgba(22, 163, 74, 0.08)"
         />
         <KPICard
           title={(user?.role === 'tutelle' || user?.role === 'directeur') ? "Citations Globales" : "Citations Totales"}
           value={totalCitations}
           icon={<FiAward size={32} />}
-          backgroundColor="rgba(59, 130, 246, 0.08)"
         />
         <KPICard
           title={(user?.role === 'tutelle' || user?.role === 'directeur') ? "Publications Globales" : "Publications"}
           value={totalPublications}
           icon={<FiBook size={32} />}
-          backgroundColor="rgba(168, 85, 247, 0.08)"
         />
         <KPICard
           title="G-Index"
           value={gIndex}
           icon={<FiTarget size={32} />}
-          backgroundColor="rgba(245, 158, 11, 0.08)"
         />
         <KPICard
           title="i10-Index"
           value={i10Index}
           icon={<FiStar size={32} />}
-          backgroundColor="rgba(239, 68, 68, 0.08)"
         />
       </div>
 

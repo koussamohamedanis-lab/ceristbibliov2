@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FiFileText, FiExternalLink, FiClipboard } from 'react-icons/fi'
 
 const PublicationsTable = ({ publications = [] }) => {
   const [currentPage, setCurrentPage] = useState(1)
@@ -42,7 +43,7 @@ const PublicationsTable = ({ publications = [] }) => {
                         className="action-link"
                         title="Voir la publication"
                       >
-                        📄
+                        <FiFileText size={16} />
                       </a>
                     )}
                     {pub.openalex_id && (
@@ -53,7 +54,7 @@ const PublicationsTable = ({ publications = [] }) => {
                         className="action-link"
                         title="Voir sur OpenAlex"
                       >
-                        🔗
+                        <FiExternalLink size={16} />
                       </a>
                     )}
                     {pub.doi && (
@@ -64,7 +65,7 @@ const PublicationsTable = ({ publications = [] }) => {
                         className="action-link"
                         title="Voir le DOI"
                       >
-                        📋
+                        <FiClipboard size={16} />
                       </a>
                     )}
                     {!pub.url && !pub.openalex_id && !pub.doi && (

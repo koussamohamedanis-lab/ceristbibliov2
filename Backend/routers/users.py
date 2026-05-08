@@ -130,7 +130,7 @@ def get_user_publications(user_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{user_id}/profiles")
 def get_user_profiles(user_id: int, db: Session = Depends(get_db)):
-    """Récupérer les profils externes d'un utilisateur"""
+    """Récupérer les profils externes d'un utilisateur depuis OpenAlex"""
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -139,14 +139,55 @@ def get_user_profiles(user_id: int, db: Session = Depends(get_db)):
                 detail="Utilisateur non trouvé"
             )
         
-        # Retourner les profils disponibles
-        return {
+        openalex_id = getattr(user, 'author_id_openalex', None)
+        
+        result = {
             "user_id": user_id,
-            "open_alex_id": getattr(user, 'author_id_openalex', None),
+            "open_alex_id": openalex_id,
             "orcid": None,
             "pubmed_id": None,
             "scopus_id": None
         }
+        
+        # Si l'utilisateur a un ID OpenAlex, récupérer ses profils externes
+        if openalex_id:
+            try:
+                import httpx
+                # Nettoyer l'ID
+                clean_id = openalex_id
+                if "openalex.org" in openalex_id:
+                    clean_id = openalex_id.split("/")[-1]
+                
+                url = f"https://api.openalex.org/authors/{clean_id}"
+                with httpx.Client(timeout=8.0) as client:
+                    response = client.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        ids = data.get("ids", {})
+                        
+                        # Extraire ORCID (format: "https://orcid.org/0000-0001-...")
+                        orcid_url = ids.get("orcid")
+                        if orcid_url:
+                            result["orcid"] = orcid_url.replace("https://orcid.org/", "")
+                        
+                        # Extraire Scopus (format: "http://www.scopus.com/inward/authorDetails.url?authorID=123&...")
+                        scopus_url = ids.get("scopus")
+                        if scopus_url:
+                            # Extraire l'ID Scopus de l'URL
+                            if "authorID=" in scopus_url:
+                                result["scopus_id"] = scopus_url.split("authorID=")[1].split("&")[0]
+                            else:
+                                result["scopus_id"] = scopus_url.split("/")[-1]
+                        
+                        # PubMed : pas directement dans OpenAlex, on utilise le nom pour chercher
+                        display_name = data.get("display_name")
+                        if display_name:
+                            result["pubmed_id"] = display_name
+                            
+            except Exception as e:
+                print(f"[WARN] Could not fetch OpenAlex profiles for user {user_id}: {e}")
+        
+        return result
     except HTTPException:
         raise
     except:

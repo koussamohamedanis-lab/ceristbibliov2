@@ -1,6 +1,6 @@
-const KPICard = ({ title, value, icon, backgroundColor }) => {
+const KPICard = ({ title, value, icon }) => {
   return (
-    <div className="kpi-card" style={{ backgroundColor }}>
+    <div className="kpi-card">
       <div className="kpi-icon">{icon}</div>
       <div className="kpi-content">
         <p className="kpi-title">{title}</p>

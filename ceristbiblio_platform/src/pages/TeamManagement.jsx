@@ -230,9 +230,9 @@ function TeamManagement() {
                           <stop offset="95%" stopColor="#16A34A" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--bordres)" />
+                      <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: 'var(--sec-text)', fontSize: 12}} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--sec-text)', fontSize: 12}} />
                       <Tooltip 
                         contentStyle={{borderRadius: 'var(--radius)', border: 'none', boxShadow: 'var(--shadow-md)'}}
                       />
@@ -279,8 +279,8 @@ function TeamManagement() {
               <div style={{ width: '100%', height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="70%" data={advancedStats.radar}>
-                    <PolarGrid stroke="#e2e8f0" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <PolarGrid stroke="var(--bordres)" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--sec-text)', fontSize: 12 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                     <Radar name="Productivité" dataKey="Productivité" stroke="#8884d8" fill="#8884d8" fillOpacity={0.4} />
                     <Radar name="Impact" dataKey="Impact (Citations)" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.4} />
@@ -298,9 +298,9 @@ function TeamManagement() {
               <div style={{ width: '100%', height: 350 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis type="number" dataKey="x" name="Centralité" tick={false} axisLine={{ stroke: '#cbd5e1' }} />
-                    <YAxis type="number" dataKey="y" name="Densité" tick={false} axisLine={{ stroke: '#cbd5e1' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--bordres)" />
+                    <XAxis type="number" dataKey="x" name="Centralité" tick={false} axisLine={{ stroke: 'var(--bordres)' }} />
+                    <YAxis type="number" dataKey="y" name="Densité" tick={false} axisLine={{ stroke: 'var(--bordres)' }} />
                     <ZAxis type="number" dataKey="z" range={[100, 1000]} name="Fréquence" />
                     <Tooltip 
                       cursor={{ strokeDasharray: '3 3' }} 
